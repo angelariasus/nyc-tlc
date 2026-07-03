@@ -88,7 +88,64 @@ https://d37ci6vzurychx.cloudfront.net/trip-data/
 
 ## Project Structure
 
-![Project Structure](assets/structure.png)
+```
+nyc-tlc/
+│
+├── core/                           # Reusable framework (no business logic)
+│   ├── audit/
+│   │   ├── control_manager.py      # Pipeline lifecycle & audit trail
+│   │   ├── quality.py              # Data quality check models
+│   │   └── logger.py               # Structured logging setup
+│   ├── config/
+│   │   └── settings.py             # Centralized config via Pydantic/env vars
+│   └── storage/
+│       └── mongo_client.py         # MongoDB connection factory
+│
+├── src/                            # Domain-specific transformations
+│   ├── spark_utils.py              # SparkSession factory with Mongo connector
+│   ├── paths.py                    # Dataset path resolver by vehicle type & year
+│   └── transformations/
+│       ├── tlc_rules.py            # Data quality filter rules
+│       ├── enrichment.py           # Zone lookup broadcast join logic
+│       └── schema.py               # Silver document schema builder
+│
+├── notebooks/                      # Execution notebooks (one per pipeline stage)
+│   ├── 00_setup_download.ipynb     # Download raw .parquet files by year/type
+│   ├── 01_bronze_ingestion.ipynb   # Raw ingest → tlc_bronze
+│   ├── 02_silver_yellow.ipynb      # Yellow clean + enrich → tlc_silver
+│   ├── 03_silver_green.ipynb       # Green clean + enrich → tlc_silver
+│   ├── 04_gold_metrics.ipynb       # Aggregations → tlc_gold
+│   └── 05_exploratory_analysis.ipynb # Ad-hoc queries against Silver/Gold
+│
+├── tests/                          # Unit and integration tests
+│   ├── test_control_manager.py
+│   └── test_tlc_rules.py
+│
+├── docs/                           # Extended documentation
+│   ├── data_dictionary.md
+│   └── audit_schema.md
+│
+├── data/                           # Local data directory (git-ignored)
+│   ├── raw/
+│   │   ├── yellow/                 # yellow_tripdata_YYYY-MM.parquet
+│   │   ├── green/                  # green_tripdata_YYYY-MM.parquet
+│   │   ├── fhv/                    # fhv_tripdata_YYYY-MM.parquet
+│   │   ├── hvfhv/                  # fhvhv_tripdata_YYYY-MM.parquet
+│   │   └── lookup/                 # taxi_zone_lookup.csv
+│   └── audit/
+│       └── executions/             # Local JSON audit backup
+│
+├── logs/                           # Pipeline execution logs
+├── assets/                         # Architecture diagrams, images
+│
+├── .env.example                    # Environment variable template
+├── .gitignore
+├── docker-compose.yml              # MongoDB + Jupyter PySpark stack
+├── Dockerfile                      # Custom Jupyter image with Mongo connector
+├── requirements.txt
+├── requirements-dev.txt
+└── README.md
+```
 
 ---
 
