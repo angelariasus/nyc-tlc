@@ -127,18 +127,26 @@ nyc-tlc/
 ├── src/                            # Domain-specific transformations
 │   ├── spark_utils.py              # SparkSession factory with Mongo connector
 │   ├── paths.py                    # Dataset path resolver by vehicle type & year
-│   └── transformations/
+│   └── silver/
 │       ├── tlc_rules.py            # Data quality filter rules
 │       ├── enrichment.py           # Zone lookup broadcast join logic
 │       └── schema.py               # Silver document schema builder
 │
 ├── notebooks/                      # Execution notebooks (one per pipeline stage)
-│   ├── 00_setup_download.ipynb     # Download raw .parquet files by year/type
-│   ├── 01_bronze_ingestion.ipynb   # Raw ingest → tlc_bronze
-│   ├── 02_silver_yellow.ipynb      # Yellow clean + enrich → tlc_silver
-│   ├── 03_silver_green.ipynb       # Green clean + enrich → tlc_silver
-│   ├── 04_gold_metrics.ipynb       # Aggregations → tlc_gold
-│   └── 05_exploratory_analysis.ipynb # Ad-hoc queries against Silver/Gold
+│   ├── bronze/
+│   │   ├── 00_setup_download.ipynb     # Download raw .parquet files by year/type
+│   │   └── 01_bronze_ingestion.ipynb   # Raw ingest → tlc_bronze
+│   ├── silver/
+│   │   ├── 02_silver_yellow.ipynb      # Yellow clean + enrich → tlc_silver
+│   │   ├── 03_silver_green.ipynb       # Green clean + enrich → tlc_silver
+│   │   ├── 04_silver_fhv.ipynb         # FHV clean + enrich → tlc_silver
+│   │   └── 05_silver_hvfhv.ipynb       # High Volume FHV clean + enrich → tlc_silver
+│   ├── gold/
+│   │   ├── 06_gold_dimensions.ipynb    # Star Schema: Static Dimensions
+│   │   ├── 07_gold_fact_trips.ipynb    # Star Schema: Unified Fact Table
+│   │   └── 08_gold_metrics.ipynb       # Business KPIs (Data Marts)
+│   └── analysis/
+│       └── 09_exploratory_analysis.ipynb # Ad-hoc queries against Star Schema
 │
 ├── tests/                          # Unit and integration tests
 │   ├── test_control_manager.py
