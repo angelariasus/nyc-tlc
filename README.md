@@ -18,6 +18,8 @@ A scalable, production-grade data lake implementing the **Medallion Architecture
 - [Pipeline Overview](#pipeline-overview)
 - [Audit Framework](#audit-framework)
 - [Configuration](#configuration)
+- [Documentation](#documentation)
+- [Changelog](#changelog)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -223,11 +225,17 @@ VEHICLE_TYPES = ["yellow", "green"]  # Add "fhv", "hvfhv" as needed
 
 ### 4. Run the Pipeline
 
-Execute notebooks in order:
+Execute the notebooks sequentially from `00` to `09`:
 
-```
-00_setup_download.ipynb  →  01_bronze_ingestion.ipynb  →
-02_silver_yellow.ipynb   →  04_gold_metrics.ipynb
+```text
+# Bronze
+00_setup_download.ipynb  → 01_bronze_ingestion.ipynb
+
+# Silver
+02_silver_yellow.ipynb   → 03_silver_green.ipynb → 04_silver_fhv.ipynb → 05_silver_hvfhv.ipynb
+
+# Gold & Analytics
+06_gold_dimensions.ipynb → 07_gold_fact_trips.ipynb → 08_gold_metrics.ipynb → 09_exploratory_analysis.ipynb
 ```
 
 ---
@@ -283,16 +291,17 @@ Each Silver document adopts a normalized nested structure:
 }
 ```
 
-### Gold Layer — Business Aggregations
+### Gold Layer — Star Schema & Data Marts
 
-Pre-computed KPI collections in `tlc_gold`:
+The Gold layer models the consolidated Silver data using a Star Schema optimized for OLAP:
 
 | Collection | Description |
 |---|---|
-| `kpi_hourly_volume` | Trip count & avg fare by hour × borough |
-| `kpi_revenue_zone` | Revenue breakdown per pickup zone |
-| `kpi_congestion_impact` | Congestion fee analysis (2025+ only) |
-| `kpi_payment_trends` | Payment type distribution over time |
+| `fact_trips` | Unified and flattened fact table spanning all vehicle types |
+| `dim_zone`, `dim_date`, `dim_vehicle` | Primary analytical dimensions |
+| `dim_vendor`, `dim_rate_code`, `dim_payment_type` | Categorical lookups |
+
+Business metrics are calculated over this Star Schema in `08_gold_metrics.ipynb`.
 
 ---
 
@@ -350,6 +359,22 @@ All configuration is driven by environment variables. Copy `.env.example` to `.e
 | `MONGO_AUTH_DB` | `admin` | Authentication database |
 | `TLC_DATA_URL` | `https://d37ci6vzurychx.cloudfront.net/trip-data` | TLC CDN base URL |
 | `PROJECT_ROOT` | `/home/jovyan/work` | Root path inside container |
+
+---
+
+## Documentation
+
+Comprehensive technical documentation is available in the [`docs/`](docs/) directory:
+- [Architecture & Medallion Pattern](docs/architecture.md)
+- [Data Quality & Audit Framework](docs/data_quality.md)
+- [BI Tool Integration (PowerBI)](docs/bi_integration.md)
+- Layer specifications: [Bronze](docs/layers/bronze.md), [Silver](docs/layers/silver.md), and [Gold (Star Schema)](docs/layers/gold.md).
+
+---
+
+## Changelog
+
+See the [CHANGELOG.md](CHANGELOG.md) for a complete history of updates, feature additions, and architectural changes.
 
 ---
 
