@@ -42,6 +42,8 @@ This project provides a complete, reproducible data engineering pipeline that:
 
 ## Architecture
 
+![Architecture Diagram](assets/diagram.png)
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                     NYC TLC Medallion Data Lake                          │
