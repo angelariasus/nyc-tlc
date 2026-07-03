@@ -75,7 +75,7 @@ You can find the official user guides and schemas on the [official TLC page](htt
 
 ### Official TLC Page Reference
 
-![Official TLC Website Screenshot](assets/tlc_website.png)
+![Official TLC Website Screenshot](assets/tlc_web.png)
 
 ### Available Vehicle Types
 
