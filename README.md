@@ -19,6 +19,7 @@ A scalable, production-grade data lake implementing the **Medallion Architecture
 - [Audit Framework](#audit-framework)
 - [Configuration](#configuration)
 - [Contributing](#contributing)
+- [License](#license)
 
 ---
 
@@ -326,6 +327,12 @@ All configuration is driven by environment variables. Copy `.env.example` to `.e
 2. Create a feature branch: `git checkout -b feature/your-feature`.
 3. Commit your changes following [Conventional Commits](https://www.conventionalcommits.org/).
 4. Open a Pull Request against `main`.
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
