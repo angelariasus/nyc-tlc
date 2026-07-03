@@ -203,3 +203,152 @@ def build_green_silver(df: DataFrame, run_id: str) -> DataFrame:
 
     logger.info("[SCHEMA] Green Silver schema applied.")
     return silver
+
+
+def build_fhv_silver(df: DataFrame, run_id: str) -> DataFrame:
+    """
+    Transform a For-Hire Vehicle (FHV) Bronze DataFrame into the Silver schema.
+    Since FHV has very few fields compared to Yellow/Green, missing fields
+    in 'metrics' and 'financials' are filled with nulls to maintain schema consistency.
+    """
+    duration_min = (
+        F.unix_timestamp("dropoff_datetime") - F.unix_timestamp("pickup_datetime")
+    ) / 60.0
+
+    silver = df.select(
+        F.lit(None).cast("int").alias("vendor_id"),
+
+        F.struct(
+            F.col("pickup_datetime").alias("pickup"),
+            F.col("dropoff_datetime").alias("dropoff"),
+            F.round(duration_min, 2).alias("duration_minutes"),
+        ).alias("datetimes"),
+
+        F.struct(
+            F.struct(
+                F.col("PULocationID").alias("zone_id"),
+                F.col("pu_borough").alias("borough"),
+                F.col("pu_zone").alias("zone"),
+                F.col("pu_service_zone").alias("service_zone"),
+            ).alias("pickup"),
+            F.struct(
+                F.col("DOLocationID").alias("zone_id"),
+                F.col("do_borough").alias("borough"),
+                F.col("do_zone").alias("zone"),
+                F.col("do_service_zone").alias("service_zone"),
+            ).alias("dropoff"),
+        ).alias("locations"),
+
+        F.struct(
+            F.lit(None).cast("double").alias("distance_miles"),
+            F.lit(None).cast("int").alias("passenger_count"),
+            F.lit(None).cast("int").alias("trip_type"),
+        ).alias("metrics"),
+
+        F.struct(
+            F.lit(None).cast("double").alias("fare_amount"),
+            F.lit(None).cast("double").alias("extra"),
+            F.lit(None).cast("double").alias("mta_tax"),
+            F.lit(None).cast("double").alias("tip_amount"),
+            F.lit(None).cast("double").alias("tolls_amount"),
+            F.lit(None).cast("double").alias("improvement_surcharge"),
+            F.lit(None).cast("double").alias("congestion_surcharge"),
+            F.lit(None).cast("double").alias("cbd_congestion_fee"),
+            F.lit(None).cast("double").alias("total_amount"),
+            F.lit(None).cast("string").alias("payment_type"),
+        ).alias("financials"),
+
+        F.struct(
+            F.lit("fhv").alias("vehicle_type"),
+            F.lit(run_id).alias("run_id"),
+            F.current_timestamp().alias("processed_at"),
+            F.year("pickup_datetime").alias("source_year"),
+            F.month("pickup_datetime").alias("source_month"),
+        ).alias("_meta"),
+        
+        # FHV specific fields not fitting the standard pattern perfectly
+        F.col("dispatching_base_num").alias("dispatching_base_num"),
+        F.col("Affiliated_base_number").alias("affiliated_base_number"),
+        F.col("SR_Flag").alias("sr_flag"),
+    )
+
+    logger.info("[SCHEMA] FHV Silver schema applied.")
+    return silver
+
+
+def build_hvfhv_silver(df: DataFrame, run_id: str) -> DataFrame:
+    """
+    Transform a High Volume FHV (HVFHV) Bronze DataFrame into the Silver schema.
+    """
+    duration_min = (
+        F.unix_timestamp("dropoff_datetime") - F.unix_timestamp("pickup_datetime")
+    ) / 60.0
+
+    cbd_fee = (
+        F.col("cbd_congestion_fee")
+        if "cbd_congestion_fee" in df.columns
+        else F.lit(None).cast("double")
+    )
+
+    silver = df.select(
+        F.lit(None).cast("int").alias("vendor_id"),
+
+        F.struct(
+            F.col("pickup_datetime").alias("pickup"),
+            F.col("dropoff_datetime").alias("dropoff"),
+            F.round(duration_min, 2).alias("duration_minutes"),
+        ).alias("datetimes"),
+
+        F.struct(
+            F.struct(
+                F.col("PULocationID").alias("zone_id"),
+                F.col("pu_borough").alias("borough"),
+                F.col("pu_zone").alias("zone"),
+                F.col("pu_service_zone").alias("service_zone"),
+            ).alias("pickup"),
+            F.struct(
+                F.col("DOLocationID").alias("zone_id"),
+                F.col("do_borough").alias("borough"),
+                F.col("do_zone").alias("zone"),
+                F.col("do_service_zone").alias("service_zone"),
+            ).alias("dropoff"),
+        ).alias("locations"),
+
+        F.struct(
+            F.col("trip_miles").alias("distance_miles"),
+            F.lit(None).cast("int").alias("passenger_count"),
+            F.lit(None).cast("int").alias("trip_type"),
+        ).alias("metrics"),
+
+        F.struct(
+            F.col("base_passenger_fare").alias("fare_amount"),
+            F.col("airport_fee").alias("extra"),
+            F.col("sales_tax").alias("mta_tax"),
+            F.col("tips").alias("tip_amount"),
+            F.col("tolls").alias("tolls_amount"),
+            F.col("bcf").alias("improvement_surcharge"),
+            F.col("congestion_surcharge").alias("congestion_surcharge"),
+            cbd_fee.alias("cbd_congestion_fee"),
+            # Compute total roughly for HVFHV
+            (F.col("base_passenger_fare") + F.col("tolls") + F.col("sales_tax") + F.col("congestion_surcharge") + F.col("tips") + F.col("bcf") + F.col("airport_fee")).alias("total_amount"),
+            F.lit(None).cast("string").alias("payment_type"),
+        ).alias("financials"),
+
+        F.struct(
+            F.lit("hvfhv").alias("vehicle_type"),
+            F.lit(run_id).alias("run_id"),
+            F.current_timestamp().alias("processed_at"),
+            F.year("pickup_datetime").alias("source_year"),
+            F.month("pickup_datetime").alias("source_month"),
+        ).alias("_meta"),
+        
+        # HVFHV specific fields
+        F.col("hvfhs_license_num").alias("hvfhs_license_num"),
+        F.col("dispatching_base_num").alias("dispatching_base_num"),
+        F.col("originating_base_num").alias("originating_base_num"),
+        F.col("driver_pay").alias("driver_pay"),
+    )
+
+    logger.info("[SCHEMA] HVFHV Silver schema applied.")
+    return silver
+

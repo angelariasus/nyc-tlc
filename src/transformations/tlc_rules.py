@@ -85,6 +85,66 @@ GREEN_EXTRA_RULES: List[Rule] = [
     ),
 ]
 
+# ── FHV rules ─────────────────────────────────────────────────────────────────
+
+FHV_RULES: List[Rule] = [
+    Rule(
+        name="valid_pickup_location",
+        description="Pickup location ID must be in [1, 265].",
+        condition=lambda df: (
+            F.col("PULocationID").between(1, 265)
+        ),
+    ),
+    Rule(
+        name="valid_dropoff_location",
+        description="Dropoff location ID must be in [1, 265].",
+        condition=lambda df: (
+            F.col("DOLocationID").between(1, 265)
+        ),
+    ),
+    Rule(
+        name="valid_time_order",
+        description="Dropoff datetime must be after pickup datetime.",
+        condition=lambda df: (
+            F.col("dropoff_datetime") > F.col("pickup_datetime")
+        ),
+    ),
+]
+
+# ── HVFHV rules ───────────────────────────────────────────────────────────────
+
+HVFHV_RULES: List[Rule] = [
+    Rule(
+        name="valid_pickup_location",
+        description="Pickup location ID must be in [1, 265].",
+        condition=lambda df: (
+            F.col("PULocationID").between(1, 265)
+        ),
+    ),
+    Rule(
+        name="valid_dropoff_location",
+        description="Dropoff location ID must be in [1, 265].",
+        condition=lambda df: (
+            F.col("DOLocationID").between(1, 265)
+        ),
+    ),
+    Rule(
+        name="valid_time_order",
+        description="Dropoff datetime must be after pickup datetime.",
+        condition=lambda df: (
+            F.col("dropoff_datetime") > F.col("pickup_datetime")
+        ),
+    ),
+    Rule(
+        name="no_negative_pay",
+        description="Driver pay and base passenger fare must not be negative.",
+        condition=lambda df: (
+            (F.col("driver_pay") >= 0) & (F.col("base_passenger_fare") >= 0)
+        ),
+    ),
+]
+
+
 
 # ── Rule application ──────────────────────────────────────────────────────────
 
