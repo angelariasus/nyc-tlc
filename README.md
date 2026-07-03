@@ -49,6 +49,12 @@ This project provides a complete, reproducible data engineering pipeline that:
 
 ![Architecture Diagram](assets/diagram.png)
 
+### Star Schema (Gold Layer)
+
+To facilitate optimized analytical queries (OLAP) and BI tool integration, the Gold layer models the consolidated Silver data using a Star Schema (Fact and Dimension collections):
+
+![Star Schema Diagram](assets/star_schema.png)
+
 ---
 
 ## Dataset
