@@ -127,7 +127,7 @@ nyc-tlc/
 ├── src/                            # Domain-specific transformations
 │   ├── spark_utils.py              # SparkSession factory with Mongo connector
 │   ├── paths.py                    # Dataset path resolver by vehicle type & year
-│   └── silver/
+│   └── transformations/
 │       ├── tlc_rules.py            # Data quality filter rules
 │       ├── enrichment.py           # Zone lookup broadcast join logic
 │       └── schema.py               # Silver document schema builder

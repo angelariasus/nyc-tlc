@@ -19,8 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Directory Structure Refactoring**: Organized codebase to strictly follow Medallion architecture layers.
   - Notebooks are now nested inside `notebooks/bronze/`, `notebooks/silver/`, `notebooks/gold/`, and `notebooks/analysis/`.
-  - Moved transformation rules from `src/transformations` to `src/silver`.
-  - Updated all internal notebook imports to reflect the new `src.silver` path.
 - **Pipeline Orchestration**: Notebooks sequentially renamed from `00` to `09` for clear execution order.
 
 ## [0.1.0] - Initial Setup
