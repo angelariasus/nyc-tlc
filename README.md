@@ -1,3 +1,5 @@
+![NYC TLC Banner](assets/banner.png)
+
 # NYC TLC Trip Record Data — Medallion Data Lake
 
 A scalable, production-grade data lake implementing the **Medallion Architecture** (Bronze → Silver → Gold) for processing NYC Taxi and Limousine Commission (TLC) trip records. Built with **Apache PySpark** for distributed transformation and **MongoDB** as the unified storage layer across all layers.
