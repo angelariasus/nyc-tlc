@@ -53,11 +53,33 @@ This project provides a complete, reproducible data engineering pipeline that:
 
 ## Dataset
 
-Trip data is sourced from the **TLC Trip Record Data** portal, hosted on AWS CloudFront:
+Trip data is sourced from the official **TLC Trip Record Data** website:
+- **Official Page**: [TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
+- **Data Repository (CDN)**: [AWS CloudFront Trip Data Portal](https://d37ci6vzurychx.cloudfront.net/trip-data/)
 
-```
-https://d37ci6vzurychx.cloudfront.net/trip-data/
-```
+### About the Dataset
+
+The NYC Taxi and Limousine Commission (TLC) collects and provides trip records for various types of taxi and for-hire services operating in New York City:
+- **Yellow and Green Taxis**: Includes fields capturing pickup/drop-off times and locations, trip distances, itemized fares, rate types, payment types, and driver-reported passenger counts.
+- **For-Hire Vehicles (FHVs)**: Includes fields capturing the dispatching base license number, pickup time/date, and taxi zone location ID.
+- **High-Volume FHVs (HVFHVs)**: Since 2019, high-volume services (like Uber and Lyft) are reported in a separate, more detailed dataset.
+
+> [!IMPORTANT]
+> **2025 Congestion Pricing Surcharge:**
+> Starting in **2025**, a `cbd_congestion_fee` column has been added to the Yellow, Green, and High Volume FHV datasets to reflect the new Congestion Pricing charges.
+
+### Data Dictionaries & Metadata
+
+You can find the official user guides and schemas on the [official TLC page](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page):
+- [Trip Record User Guide](https://www.nyc.gov/assets/tlc/downloads/pdf/trip_record_user_guide.pdf)
+- [Yellow Trips Data Dictionary](https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf)
+- [Green Trips Data Dictionary](https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_green.pdf)
+- [FHV Trips Data Dictionary](https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_fhv.pdf)
+- [High Volume FHV Trips Data Dictionary](https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_hvfhs.pdf)
+
+### Official TLC Page Reference
+
+![Official TLC Website Screenshot](assets/tlc_website.png)
 
 ### Available Vehicle Types
 
