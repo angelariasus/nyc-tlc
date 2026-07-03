@@ -64,10 +64,6 @@ The NYC Taxi and Limousine Commission (TLC) collects and provides trip records f
 - **For-Hire Vehicles (FHVs)**: Includes fields capturing the dispatching base license number, pickup time/date, and taxi zone location ID.
 - **High-Volume FHVs (HVFHVs)**: Since 2019, high-volume services (like Uber and Lyft) are reported in a separate, more detailed dataset.
 
-> [!IMPORTANT]
-> **2025 Congestion Pricing Surcharge:**
-> Starting in **2025**, a `cbd_congestion_fee` column has been added to the Yellow, Green, and High Volume FHV datasets to reflect the new Congestion Pricing charges.
-
 ### Data Dictionaries & Metadata
 
 You can find the official user guides and schemas on the [official TLC page](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page):
