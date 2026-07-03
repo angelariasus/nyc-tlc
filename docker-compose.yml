@@ -1,0 +1,93 @@
+services:
+
+  # ── MongoDB 7.0 ──────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7.0
+    container_name: tlc_mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password123}
+    ports:
+      - "27020:27017"
+    volumes:
+      - tlc_mongodb_data:/data/db
+      - tlc_mongodb_config:/data/configdb
+      # Mount raw data directory so Spark can reference it from MongoDB container if needed
+      - ./data:/data/import:ro
+    networks:
+      - tlc_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Mongo Express (Web UI) ───────────────────────────────────────────────────
+  mongo-express:
+    image: mongo-express:1.0.2
+    container_name: tlc_mongo_express
+    restart: always
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER:-admin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-password123}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-password123}@mongodb:27017/
+      ME_CONFIG_BASICAUTH: "false"
+    ports:
+      - "8082:8081"
+    networks:
+      - tlc_network
+
+  # ── Jupyter PySpark (custom image with Mongo connector) ──────────────────────
+  jupyter-pyspark:
+    build: .
+    container_name: tlc_jupyter_spark
+    restart: always
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "8200:8888"   # JupyterLab
+      - "4060:4040"   # Spark Web UI
+    volumes:
+      - .:/home/jovyan/work         # Full project mount
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+      GRANT_SUDO: "yes"
+      JUPYTER_TOKEN: "tlc2025"
+      CHOWN_HOME: "yes"
+      CHOWN_HOME_OPTS: "-R"
+      # Pass MongoDB connection details into the container
+      MONGO_HOST: mongodb
+      MONGO_PORT: "27017"
+      MONGO_USER: ${MONGO_USER:-admin}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:-password123}
+      MONGO_AUTH_DB: admin
+      MONGO_DB_BRONZE: tlc_bronze
+      MONGO_DB_SILVER: tlc_silver
+      MONGO_DB_GOLD:   tlc_gold
+      MONGO_DB_AUDIT:  tlc_audit
+      TLC_DATA_URL: https://d37ci6vzurychx.cloudfront.net/trip-data
+      SPARK_DRIVER_MEMORY: ${SPARK_DRIVER_MEMORY:-4g}
+      SPARK_EXECUTOR_MEMORY: ${SPARK_EXECUTOR_MEMORY:-4g}
+    networks:
+      - tlc_network
+    deploy:
+      resources:
+        limits:
+          cpus: '6'
+          memory: 16G
+        reservations:
+          cpus: '2'
+          memory: 4G
+
+volumes:
+  tlc_mongodb_data:
+  tlc_mongodb_config:
+
+networks:
+  tlc_network:
+    driver: bridge

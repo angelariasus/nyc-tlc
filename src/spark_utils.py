@@ -1,0 +1,172 @@
+"""
+PySpark session factory and I/O helpers for the TLC Data Lake.
+Includes the MongoDB Spark Connector configuration.
+"""
+from __future__ import annotations
+
+from pyspark.sql import DataFrame, SparkSession
+
+from core.audit.logger import setup_logger
+from core.config.settings import settings
+
+logger = setup_logger("tlc.spark_utils")
+
+# Mongo Spark Connector package (version matches PySpark 3.x in the container)
+_MONGO_SPARK_PKG = "org.mongodb.spark:mongo-spark-connector_2.12:10.3.0"
+
+
+def get_spark(
+    app_name: str | None = None,
+    driver_memory: str | None = None,
+    executor_memory: str | None = None,
+) -> SparkSession:
+    """
+    Create or retrieve the active SparkSession.
+
+    The session is pre-configured with:
+    - MongoDB Spark Connector (read/write to all Medallion layers)
+    - Snappy Parquet compression
+    - Adaptive Query Execution (AQE) enabled
+    - Dynamic partition overwrite mode
+
+    Parameters
+    ----------
+    app_name:
+        Overrides ``settings.SPARK_APP_NAME`` when provided.
+    driver_memory / executor_memory:
+        Override environment defaults when provided.
+
+    Returns
+    -------
+    SparkSession
+    """
+    app_name       = app_name       or settings.SPARK_APP_NAME
+    driver_memory  = driver_memory  or settings.SPARK_DRIVER_MEMORY
+    executor_memory = executor_memory or settings.SPARK_EXECUTOR_MEMORY
+
+    spark = (
+        SparkSession.builder
+        .appName(app_name)
+        .master(settings.SPARK_MASTER)
+        .config("spark.driver.memory",  driver_memory)
+        .config("spark.executor.memory", executor_memory)
+        .config("spark.sql.shuffle.partitions",              "8")
+        .config("spark.sql.parquet.compression.codec",       "snappy")
+        .config("spark.sql.adaptive.enabled",                "true")
+        .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
+        .config("spark.sql.sources.partitionOverwriteMode",  "dynamic")
+        .config("spark.ui.showConsoleProgress",              "false")
+        # MongoDB Spark Connector
+        .config("spark.jars.packages", _MONGO_SPARK_PKG)
+        .config("spark.mongodb.read.connection.uri",  settings.mongo_uri())
+        .config("spark.mongodb.write.connection.uri", settings.mongo_uri())
+        .getOrCreate()
+    )
+
+    spark.sparkContext.setLogLevel("WARN")
+    logger.info(
+        f"[SPARK] Session ready | version={spark.version} "
+        f"master={spark.sparkContext.master}"
+    )
+    return spark
+
+
+# ── MongoDB I/O helpers ───────────────────────────────────────────────────────
+
+def read_mongo(
+    spark: SparkSession,
+    database: str,
+    collection: str,
+) -> DataFrame:
+    """
+    Read a full MongoDB collection into a Spark DataFrame.
+
+    Parameters
+    ----------
+    database:
+        Name of the MongoDB database (e.g. ``settings.MONGO_DB_BRONZE``).
+    collection:
+        Collection name (e.g. ``"yellow_raw"``).
+    """
+    uri = settings.mongo_spark_uri(database, collection)
+    df = (
+        spark.read
+        .format("mongodb")
+        .option("connection.uri", uri)
+        .load()
+    )
+    logger.info(f"[SPARK] Read from MongoDB {database}.{collection}")
+    return df
+
+
+def write_mongo(
+    df: DataFrame,
+    database: str,
+    collection: str,
+    mode: str = "append",
+) -> int:
+    """
+    Write a Spark DataFrame to a MongoDB collection.
+
+    Parameters
+    ----------
+    df:
+        DataFrame to persist.
+    database / collection:
+        Target MongoDB namespace.
+    mode:
+        ``"append"`` (default) or ``"overwrite"``.
+
+    Returns
+    -------
+    int
+        Number of rows written.
+    """
+    n = df.count()
+    uri = settings.mongo_spark_uri(database, collection)
+    (
+        df.write
+        .format("mongodb")
+        .option("connection.uri", uri)
+        .mode(mode)
+        .save()
+    )
+    logger.info(
+        f"[SPARK] Wrote {n:,} rows → MongoDB {database}.{collection} (mode={mode})"
+    )
+    return n
+
+
+# ── Parquet I/O helpers ───────────────────────────────────────────────────────
+
+def read_parquet(spark: SparkSession, path: str) -> DataFrame:
+    """Read one or more Parquet file(s) from the local path."""
+    df = spark.read.parquet(path)
+    logger.info(f"[SPARK] Read Parquet ← {path}")
+    return df
+
+
+def write_parquet(
+    df: DataFrame,
+    path: str,
+    mode: str = "overwrite",
+    partition_by: list[str] | None = None,
+    coalesce_to: int | None = None,
+) -> int:
+    """
+    Write a Spark DataFrame to Parquet.
+
+    Uses ``coalesce()`` (not ``repartition()``) to avoid unnecessary shuffles
+    when reducing the number of output files.
+    """
+    n = df.count()
+    if coalesce_to:
+        df = df.coalesce(coalesce_to)
+
+    writer = df.write.mode(mode).format("parquet")
+    if partition_by:
+        writer = writer.partitionBy(*partition_by)
+    writer.save(path)
+
+    logger.info(f"[SPARK] Wrote {n:,} rows → Parquet {path}")
+    return n
