@@ -24,6 +24,16 @@ PAYMENT_TYPE_MAP = {
     6: "Voided Trip",
 }
 
+def _safe_col(df: DataFrame, col_name: str, cast_type: str = "double"):
+    """
+    Safely retrieves a column if it exists in the DataFrame,
+    otherwise returns a literal Null of the specified type.
+    Crucial for Schema Evolution (handling historical data before 2019).
+    """
+    if col_name in df.columns:
+        return F.col(col_name).cast(cast_type)
+    return F.lit(None).cast(cast_type)
+
 
 def build_yellow_silver(df: DataFrame, run_id: str) -> DataFrame:
     """
@@ -60,13 +70,6 @@ def build_yellow_silver(df: DataFrame, run_id: str) -> DataFrame:
     duration_min = (
         unix_timestamp("tpep_dropoff_datetime") - unix_timestamp("tpep_pickup_datetime")
     ) / 60.0
-
-    # Handle cbd_congestion_fee: present only in 2025+ files
-    cbd_fee = (
-        F.col("cbd_congestion_fee")
-        if "cbd_congestion_fee" in df.columns
-        else F.lit(None).cast("double")
-    )
 
     payment_map_expr = F.create_map(
         *[item for pair in [(F.lit(k), F.lit(v)) for k, v in PAYMENT_TYPE_MAP.items()] for item in pair]
@@ -117,8 +120,9 @@ def build_yellow_silver(df: DataFrame, run_id: str) -> DataFrame:
             F.col("tip_amount").alias("tip_amount"),
             F.col("tolls_amount").alias("tolls_amount"),
             F.col("improvement_surcharge").alias("improvement_surcharge"),
-            F.col("congestion_surcharge").alias("congestion_surcharge"),
-            cbd_fee.alias("cbd_congestion_fee"),
+            _safe_col(df, "congestion_surcharge").alias("congestion_surcharge"),
+            _safe_col(df, "airport_fee").alias("airport_fee"),
+            _safe_col(df, "cbd_congestion_fee").alias("cbd_congestion_fee"),
             F.col("total_amount").alias("total_amount"),
             payment_map_expr[F.col("payment_type").cast("int")].alias("payment_type"),
         ).alias("financials"),
@@ -158,12 +162,6 @@ def build_green_silver(df: DataFrame, run_id: str) -> DataFrame:
     duration_min = (
         F.unix_timestamp("lpep_dropoff_datetime") - F.unix_timestamp("lpep_pickup_datetime")
     ) / 60.0
-
-    cbd_fee = (
-        F.col("cbd_congestion_fee")
-        if "cbd_congestion_fee" in df.columns
-        else F.lit(None).cast("double")
-    )
 
     payment_map_expr = F.create_map(
         *[item for pair in [(F.lit(k), F.lit(v)) for k, v in PAYMENT_TYPE_MAP.items()] for item in pair]
@@ -208,8 +206,9 @@ def build_green_silver(df: DataFrame, run_id: str) -> DataFrame:
             F.col("tip_amount").alias("tip_amount"),
             F.col("tolls_amount").alias("tolls_amount"),
             F.col("improvement_surcharge").alias("improvement_surcharge"),
-            F.col("congestion_surcharge").alias("congestion_surcharge"),
-            cbd_fee.alias("cbd_congestion_fee"),
+            _safe_col(df, "congestion_surcharge").alias("congestion_surcharge"),
+            _safe_col(df, "airport_fee").alias("airport_fee"),
+            _safe_col(df, "cbd_congestion_fee").alias("cbd_congestion_fee"),
             F.col("total_amount").alias("total_amount"),
             payment_map_expr[F.col("payment_type").cast("int")].alias("payment_type"),
         ).alias("financials"),
@@ -289,6 +288,7 @@ def build_fhv_silver(df: DataFrame, run_id: str) -> DataFrame:
             F.lit(None).cast("double").alias("tolls_amount"),
             F.lit(None).cast("double").alias("improvement_surcharge"),
             F.lit(None).cast("double").alias("congestion_surcharge"),
+            F.lit(None).cast("double").alias("airport_fee"),
             F.lit(None).cast("double").alias("cbd_congestion_fee"),
             F.lit(None).cast("double").alias("total_amount"),
             F.lit(None).cast("string").alias("payment_type"),
@@ -331,13 +331,16 @@ def build_hvfhv_silver(df: DataFrame, run_id: str) -> DataFrame:
         F.unix_timestamp("dropoff_datetime") - F.unix_timestamp("pickup_datetime")
     ) / 60.0
 
-    cbd_fee = (
-        F.col("cbd_congestion_fee")
-        if "cbd_congestion_fee" in df.columns
-        else F.lit(None).cast("double")
-    )
-
     has_flags = "quality_flags" in df.columns
+
+    # Fetch safe columns for computation
+    safe_airport_fee = _safe_col(df, "airport_fee")
+    safe_congestion  = _safe_col(df, "congestion_surcharge")
+    safe_cbd         = _safe_col(df, "cbd_congestion_fee")
+
+    # Coalesce to 0 for math so the total isn't nulled out
+    math_airport    = F.coalesce(safe_airport_fee, F.lit(0.0))
+    math_congestion = F.coalesce(safe_congestion, F.lit(0.0))
 
     silver = df.select(
         F.lit(None).cast("int").alias("vendor_id"),
@@ -371,18 +374,19 @@ def build_hvfhv_silver(df: DataFrame, run_id: str) -> DataFrame:
 
         F.struct(
             F.col("base_passenger_fare").alias("fare_amount"),
-            F.col("airport_fee").alias("extra"),
+            safe_airport_fee.alias("extra"),
             F.col("sales_tax").alias("mta_tax"),
             F.col("tips").alias("tip_amount"),
             F.col("tolls").alias("tolls_amount"),
             F.col("bcf").alias("improvement_surcharge"),
-            F.col("congestion_surcharge").alias("congestion_surcharge"),
-            cbd_fee.alias("cbd_congestion_fee"),
+            safe_congestion.alias("congestion_surcharge"),
+            safe_airport_fee.alias("airport_fee"),
+            safe_cbd.alias("cbd_congestion_fee"),
             # Compute total roughly for HVFHV
             (
                 F.col("base_passenger_fare") + F.col("tolls") + F.col("sales_tax")
-                + F.col("congestion_surcharge") + F.col("tips") + F.col("bcf")
-                + F.col("airport_fee")
+                + math_congestion + F.col("tips") + F.col("bcf")
+                + math_airport
             ).alias("total_amount"),
             F.lit(None).cast("string").alias("payment_type"),
         ).alias("financials"),
