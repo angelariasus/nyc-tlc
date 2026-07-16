@@ -2,9 +2,9 @@
 
 # NYC TLC Trip Record Data — Medallion Data Lake
 
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white) ![PySpark](https://img.shields.io/badge/Apache%20PySpark-Distributed%20Processing-E25A1C?logo=apachespark&logoColor=white) ![MongoDB](https://img.shields.io/badge/MongoDB-7.0-47A248?logo=mongodb&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white) ![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-F37626?logo=jupyter&logoColor=white) ![Pytest](https://img.shields.io/badge/Testing-Pytest-0A9EDC?logo=pytest&logoColor=white) ![Pydantic](https://img.shields.io/badge/Pydantic-Validation-E92063?logo=pydantic&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white) ![PySpark](https://img.shields.io/badge/Apache%20PySpark-Distributed%20Processing-E25A1C?logo=apachespark&logoColor=white) ![Kafka](https://img.shields.io/badge/Apache%20Kafka-Streaming-231F20?logo=apachekafka&logoColor=white) ![MongoDB](https://img.shields.io/badge/MongoDB-7.0-47A248?logo=mongodb&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white) ![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-F37626?logo=jupyter&logoColor=white) ![Pytest](https://img.shields.io/badge/Testing-Pytest-0A9EDC?logo=pytest&logoColor=white) ![Pydantic](https://img.shields.io/badge/Pydantic-Validation-E92063?logo=pydantic&logoColor=white)
 
-A scalable, production-grade data lake implementing the **Medallion Architecture** (Bronze → Silver → Gold) for processing NYC Taxi and Limousine Commission (TLC) trip records. Built with **Apache PySpark** for distributed transformation and **MongoDB** as the unified storage layer across all layers.
+A scalable, production-grade data lake implementing the **Medallion Architecture** (Bronze → Silver → Gold) for processing NYC Taxi and Limousine Commission (TLC) trip records. Built with **Apache PySpark** and **Apache Kafka** for a Hybrid Kappa (Batch + Streaming) processing model, and **MongoDB** as the unified storage layer across all layers.
 
 ---
 
@@ -41,7 +41,8 @@ This project provides a complete, reproducible data engineering pipeline that:
 | Decision | Rationale |
 |---|---|
 | **MongoDB as single store** | Schema flexibility accommodates structural differences between Yellow, Green, FHV, and HVFHV datasets (e.g., `cbd_congestion_fee` present only in 2025+ records). |
-| **PySpark for all transformations** | Handles the scale of 100M+ records without memory constraints; enables broadcast joins for lookup enrichment. |
+| **Hybrid Kappa Architecture** | Historical data (2023-2025) is processed in Bulk Batch to avoid network saturation, while live data (2026) is streamed via **Apache Kafka** in real-time. |
+| **PySpark Structured Streaming** | Handles both batch processing and continuous stream processing (`readStream` + `foreachBatch`) using the exact same transformation logic. |
 | **Medallion Architecture** | Clear separation of concerns between raw ingestion, curated data, and business aggregations. Supports data reprocessing at any layer. |
 | **Centralized Audit in MongoDB** | All pipeline execution logs, quality check results, and quarantined records are stored in `tlc_audit` for cross-layer traceability. |
 
@@ -140,12 +141,14 @@ nyc-tlc/
 │       ├── enrichment.py           # Zone lookup broadcast join logic
 │       └── schema.py               # Silver document schema builder
 │
-├── notebooks/                      # Execution notebooks (one per pipeline stage)
+│   ├── notebooks/                      # Execution notebooks (one per pipeline stage)
 │   ├── bronze/
 │   │   ├── 00_setup_download.ipynb     # Download raw .parquet files by year/type
-│   │   └── 01_bronze_ingestion.ipynb   # Raw ingest → tlc_bronze
+│   │   ├── 01_bronze_ingestion.ipynb   # Raw batch ingest → tlc_bronze
+│   │   └── 01b_kafka_producer_2026.ipynb # Kafka Producer for 2026 streaming simulation
 │   ├── silver/
-│   │   ├── 02_silver_yellow.ipynb      # Yellow clean + enrich → tlc_silver
+│   │   ├── 02_silver_yellow.ipynb      # Yellow clean + enrich → tlc_silver (Batch)
+│   │   ├── 02b_silver_stream_consumer.ipynb # Spark Structured Streaming Consumer
 │   │   ├── 03_silver_green.ipynb       # Green clean + enrich → tlc_silver
 │   │   ├── 04_silver_fhv.ipynb         # FHV clean + enrich → tlc_silver
 │   │   └── 05_silver_hvfhv.ipynb       # High Volume FHV clean + enrich → tlc_silver
@@ -212,7 +215,10 @@ docker compose up -d
 
 This starts:
 - **MongoDB 7.0** on `localhost:27017`
-- **Jupyter PySpark** (with Mongo Spark Connector) on `localhost:8100`
+- **Apache Kafka (KRaft)** on `localhost:9094` (internal `kafka:9092`)
+- **Kafka UI** on `http://localhost:8090`
+- **Jupyter PySpark** (with Mongo & Kafka Spark Connectors) on `localhost:8200`
+- **Spark Web UI** on `http://localhost:4060`
 
 ### 3. Download Raw Data
 
@@ -228,14 +234,20 @@ VEHICLE_TYPES = ["yellow", "green"]  # Add "fhv", "hvfhv" as needed
 Execute the notebooks sequentially from `00` to `09`:
 
 ```text
+# Phase 1: Historical Data (Batch)
 # Bronze
 00_setup_download.ipynb  → 01_bronze_ingestion.ipynb
 
 # Silver
 02_silver_yellow.ipynb   → 03_silver_green.ipynb → 04_silver_fhv.ipynb → 05_silver_hvfhv.ipynb
 
-# Gold & Analytics
+# Phase 2: Live Data (Kafka Streaming)
+02b_silver_stream_consumer.ipynb  (Start first! Listens to topic)
+01b_kafka_producer_2026.ipynb     (Sends 2026 data in micro-batches)
+
+# Phase 3: Gold & Analytics
 06_gold_dimensions.ipynb → 07_gold_fact_trips.ipynb → 08_gold_metrics.ipynb → 09_exploratory_analysis.ipynb
+10_observability_dashboard.ipynb
 ```
 
 ---

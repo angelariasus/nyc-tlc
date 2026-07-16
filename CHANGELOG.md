@@ -8,13 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 2: Kafka Streaming (Kappa Hybrid)**: Introduced real-time streaming for 2026 data.
+  - Added `bitnami/kafka:3.7` (KRaft mode) and `kafka-ui` to `docker-compose.yml`.
+  - Created `01b_kafka_producer_2026.ipynb` to simulate live data ingestion in micro-batches.
+  - Created `02b_silver_stream_consumer.ipynb` using PySpark Structured Streaming (`readStream` + `foreachBatch`) for real-time Bronze-bypass ingestion.
+  - Upgraded `spark_utils.py` with `get_spark_streaming()` combining MongoDB and Kafka connectors.
 - **Silver Layer Extension**: Support for all TLC vehicle types (Yellow, Green, FHV, HVFHV).
   - Specific quality rules (`FHV_RULES`, `HVFHV_RULES`) for non-medallion vehicles.
   - Dynamic schemas (`build_fhv_silver`, `build_hvfhv_silver`) that fill missing financial data with nulls to maintain a unified nested schema.
 - **Gold Layer Star Schema**: Full architectural upgrade to support OLAP and BI tools.
   - Creation of static lookup dimensions (`dim_zone`, `dim_date`, `dim_vehicle`, `dim_vendor`, `dim_rate_code`, `dim_payment_type`).
   - Consolidation of all Silver tables into a single unified `fact_trips` table using foreign keys.
-  - Refactored `08_gold_metrics.ipynb` to aggregate over the Star Schema.
+  - Refactored `08_gold_metrics.ipynb` to aggregate over the Star Schema and compute SARIMA forecasts.
+  - Created `10_observability_dashboard.ipynb` for real-time pipeline audit visualization.
 
 ### Changed
 - **Directory Structure Refactoring**: Organized codebase to strictly follow Medallion architecture layers.
