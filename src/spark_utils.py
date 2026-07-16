@@ -14,6 +14,10 @@ logger = setup_logger("tlc.spark_utils")
 # Mongo Spark Connector package (version matches PySpark 3.x in the container)
 _MONGO_SPARK_PKG = "org.mongodb.spark:mongo-spark-connector_2.12:10.3.0"
 
+# Kafka Spark SQL connector — must match the Spark version inside the container.
+# Spark 3.4.x → use 3.4.1; Spark 3.5.x → use 3.5.0
+_KAFKA_SPARK_PKG = "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1"
+
 
 def get_spark(
     app_name: str | None = None,
@@ -67,6 +71,77 @@ def get_spark(
     logger.info(
         f"[SPARK] Session ready | version={spark.version} "
         f"master={spark.sparkContext.master}"
+    )
+    return spark
+
+
+def get_spark_streaming(
+    app_name: str | None = None,
+    driver_memory: str | None = None,
+    executor_memory: str | None = None,
+    kafka_bootstrap: str = "kafka:9092",
+) -> SparkSession:
+    """
+    Create or retrieve a SparkSession with **both** the MongoDB Spark Connector
+    and the Spark-Kafka connector loaded.
+
+    Use this session for notebooks that use ``readStream`` from Kafka and
+    write to MongoDB via ``foreachBatch``.
+
+    Parameters
+    ----------
+    app_name:
+        Overrides ``settings.SPARK_APP_NAME`` when provided.
+    driver_memory / executor_memory:
+        Override environment defaults when provided.
+    kafka_bootstrap:
+        Kafka bootstrap servers string (default: ``"kafka:9092"`` for Docker).
+
+    Returns
+    -------
+    SparkSession
+        Session pre-configured for Kafka streaming + MongoDB writes.
+
+    Notes
+    -----
+    * **Never** call ``.count()`` on a streaming DataFrame outside of
+      ``foreachBatch``.  All audit counts must happen inside the batch callback
+      where the DataFrame is a static, countable micro-batch.
+    * Set ``checkpointLocation`` on every ``writeStream`` to guarantee
+      exactly-once semantics and safe restarts.
+    """
+    app_name        = app_name        or (settings.SPARK_APP_NAME + "_Streaming")
+    driver_memory   = driver_memory   or settings.SPARK_DRIVER_MEMORY
+    executor_memory = executor_memory or settings.SPARK_EXECUTOR_MEMORY
+
+    # Combine both JARs into a single comma-separated packages string
+    packages = f"{_MONGO_SPARK_PKG},{_KAFKA_SPARK_PKG}"
+
+    spark = (
+        SparkSession.builder
+        .appName(app_name)
+        .master(settings.SPARK_MASTER)
+        .config("spark.driver.memory",   driver_memory)
+        .config("spark.executor.memory", executor_memory)
+        .config("spark.sql.shuffle.partitions",              "4")
+        .config("spark.sql.parquet.compression.codec",       "snappy")
+        .config("spark.sql.adaptive.enabled",                "true")
+        .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
+        .config("spark.ui.showConsoleProgress",              "false")
+        # Combined packages: MongoDB + Kafka
+        .config("spark.jars.packages", packages)
+        # MongoDB Spark Connector
+        .config("spark.mongodb.read.connection.uri",  settings.mongo_uri())
+        .config("spark.mongodb.write.connection.uri", settings.mongo_uri())
+        # Kafka consumer defaults
+        .config("spark.streaming.kafka.consumer.cache.enabled", "false")
+        .getOrCreate()
+    )
+
+    spark.sparkContext.setLogLevel("WARN")
+    logger.info(
+        f"[SPARK] Streaming session ready | version={spark.version} "
+        f"kafka_bootstrap={kafka_bootstrap}"
     )
     return spark
 

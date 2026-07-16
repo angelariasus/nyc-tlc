@@ -41,6 +41,81 @@ services:
     networks:
       - tlc_network
 
+  # ── Apache Kafka 3.7 (KRaft mode — no Zookeeper needed) ─────────────────────
+  #
+  # KRaft (Kafka Raft) eliminates the Zookeeper dependency, saving ~500 MB RAM.
+  # Two listener profiles are configured:
+  #   PLAINTEXT  → used internally by Spark (container-to-container: kafka:9092)
+  #   EXTERNAL   → used by the host machine / notebook producer (localhost:9094)
+  # ─────────────────────────────────────────────────────────────────────────────
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: tlc_kafka
+    restart: always
+    ports:
+      - "9094:9094"   # External access from host / notebook
+    environment:
+      # KRaft configuration
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      # Listeners
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # Topic defaults — auto-create enabled for ease of use
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_CFG_NUM_PARTITIONS: 4        # 4 partitions → 4 Spark tasks in parallel
+
+      # Retention: keep only 48h of data (enough for exam day)
+      KAFKA_CFG_LOG_RETENTION_HOURS: 48
+      KAFKA_CFG_LOG_SEGMENT_BYTES: 104857600   # 100 MB segments
+
+      # Performance tuning for batch-as-stream ingestion
+      KAFKA_CFG_MESSAGE_MAX_BYTES: 10485760    # 10 MB max message
+      KAFKA_CFG_REPLICA_FETCH_MAX_BYTES: 10485760
+
+      # Unique cluster ID (KRaft requirement)
+      KAFKA_KRAFT_CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+    volumes:
+      - tlc_kafka_data:/bitnami/kafka
+    networks:
+      - tlc_network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ── Kafka UI — visual monitoring of topics & consumer groups ─────────────────
+  #
+  # Dashboard at http://localhost:8090
+  # Shows: topic offsets, message inspector, consumer lag, throughput charts.
+  # Extremely useful for the exam demo — shows messages flowing in real time.
+  # ─────────────────────────────────────────────────────────────────────────────
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: tlc_kafka_ui
+    restart: always
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: tlc-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    networks:
+      - tlc_network
+
   # ── Jupyter PySpark (custom image with Mongo connector) ──────────────────────
   jupyter-pyspark:
     build: .
@@ -48,6 +123,8 @@ services:
     restart: always
     depends_on:
       mongodb:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     ports:
       - "8200:8888"   # JupyterLab
@@ -73,6 +150,10 @@ services:
       TLC_DATA_URL: https://d37ci6vzurychx.cloudfront.net/trip-data
       SPARK_DRIVER_MEMORY: ${SPARK_DRIVER_MEMORY:-4g}
       SPARK_EXECUTOR_MEMORY: ${SPARK_EXECUTOR_MEMORY:-4g}
+      # Kafka bootstrap — accessible internally via the tlc_network
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC_YELLOW_2026: tlc-yellow-2026
+      KAFKA_TOPIC_GREEN_2026:  tlc-green-2026
     networks:
       - tlc_network
     deploy:
@@ -87,6 +168,7 @@ services:
 volumes:
   tlc_mongodb_data:
   tlc_mongodb_config:
+  tlc_kafka_data:
 
 networks:
   tlc_network:
