@@ -148,7 +148,7 @@ nyc-tlc/
 │   │   └── 01b_kafka_producer_2026.ipynb # Kafka Producer for 2026 streaming simulation
 │   ├── silver/
 │   │   ├── 02_silver_yellow.ipynb      # Yellow clean + enrich → tlc_silver (Batch)
-│   │   ├── 02b_silver_stream_consumer.ipynb # Spark Structured Streaming Consumer
+│   │   ├── 02b_silver_stream_yellow.ipynb # Spark Structured Streaming Consumer (Yellow)
 │   │   ├── 03_silver_green.ipynb       # Green clean + enrich → tlc_silver
 │   │   ├── 04_silver_fhv.ipynb         # FHV clean + enrich → tlc_silver
 │   │   └── 05_silver_hvfhv.ipynb       # High Volume FHV clean + enrich → tlc_silver
@@ -242,7 +242,7 @@ Execute the notebooks sequentially from `00` to `09`:
 02_silver_yellow.ipynb   → 03_silver_green.ipynb → 04_silver_fhv.ipynb → 05_silver_hvfhv.ipynb
 
 # Phase 2: Live Data (Kafka Streaming)
-02b_silver_stream_consumer.ipynb  (Start first! Listens to topic)
+02b_silver_stream_yellow.ipynb    (Start first! Listens to topic)
 01b_kafka_producer_2026.ipynb     (Sends 2026 data in micro-batches)
 
 # Phase 3: Gold & Analytics
