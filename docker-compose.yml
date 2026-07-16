@@ -129,6 +129,7 @@ services:
     ports:
       - "8200:8888"   # JupyterLab
       - "4060:4040"   # Spark Web UI
+      - "8501:8501"   # Streamlit Dashboard
     volumes:
       - .:/home/jovyan/work         # Full project mount
     environment:
