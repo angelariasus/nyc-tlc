@@ -30,16 +30,23 @@ def build_yellow_silver(df: DataFrame, run_id: str) -> DataFrame:
     Transform a Yellow Taxi Bronze DataFrame into the Silver schema.
 
     Produces a normalized nested structure with sub-structs for:
-    - ``datetimes``  (pickup, dropoff, duration_minutes)
-    - ``locations``  (pickup/dropoff zone_id, borough, zone, after enrichment)
-    - ``metrics``    (distance_miles, passenger_count)
-    - ``financials`` (fare_amount, tip, tolls, cbd_congestion_fee, total, payment)
-    - ``_meta``      (run_id, vehicle_type, processed_at, source_year, source_month)
+    - ``datetimes``      (pickup, dropoff, duration_minutes)
+    - ``locations``      (pickup/dropoff zone_id, borough, zone, after enrichment)
+    - ``metrics``        (distance_miles, passenger_count)
+    - ``financials``     (fare_amount, tip, tolls, cbd_congestion_fee, total, payment)
+    - ``quality_flags``  (per-rule boolean pass/fail audit flags)
+    - ``_meta``          (run_id, bronze_run_id, source_file, vehicle_type,
+                          processed_at, source_year, source_month)
+
+    The ``_meta.bronze_run_id`` and ``_meta.source_file`` fields propagate the
+    upstream Bronze execution ID and original filename, providing a full
+    Bronze → Silver data-lineage chain.
 
     Parameters
     ----------
     df:
         Enriched Bronze DataFrame (after :func:`~src.transformations.enrichment.enrich_trip_locations`).
+        Must have been annotated by ``apply_quality_flags`` before calling this.
     run_id:
         The ``execution_id`` from the active :class:`~core.audit.control_manager.ControlManager`.
 
@@ -64,6 +71,9 @@ def build_yellow_silver(df: DataFrame, run_id: str) -> DataFrame:
     payment_map_expr = F.create_map(
         *[item for pair in [(F.lit(k), F.lit(v)) for k, v in PAYMENT_TYPE_MAP.items()] for item in pair]
     )
+
+    # quality_flags column is present after apply_quality_flags()
+    has_flags = "quality_flags" in df.columns
 
     silver = df.select(
         # ── Identifiers ──────────────────────────────────────────────────────
@@ -113,17 +123,25 @@ def build_yellow_silver(df: DataFrame, run_id: str) -> DataFrame:
             payment_map_expr[F.col("payment_type").cast("int")].alias("payment_type"),
         ).alias("financials"),
 
-        # ── Metadata ─────────────────────────────────────────────────────────
+        # ── Quality Flags (audit trail, preserved from rule engine) ───────────
+        *([
+            F.col("quality_flags")
+        ] if has_flags else []),
+
+        # ── Metadata (with full Bronze → Silver lineage) ──────────────────────
         F.struct(
             F.lit("yellow").alias("vehicle_type"),
             F.lit(run_id).alias("run_id"),
+            # Bronze lineage — traceable back to the ingestion run and raw file
+            F.col("_meta.run_id").alias("bronze_run_id"),
+            F.col("_meta.source_file").alias("source_file"),
             F.current_timestamp().alias("processed_at"),
             F.year("tpep_pickup_datetime").alias("source_year"),
             F.month("tpep_pickup_datetime").alias("source_month"),
         ).alias("_meta"),
     )
 
-    logger.info("[SCHEMA] Yellow Silver schema applied.")
+    logger.info("[SCHEMA] Yellow Silver schema applied (with bronze lineage + quality_flags).")
     return silver
 
 
@@ -134,6 +152,8 @@ def build_green_silver(df: DataFrame, run_id: str) -> DataFrame:
     Identical nested structure to :func:`build_yellow_silver` but uses
     Green-specific column names (``lpep_*`` for datetimes,
     ``trip_type`` instead of ``RatecodeID``).
+    Propagates ``bronze_run_id`` and ``source_file`` from the Bronze ``_meta``
+    and preserves ``quality_flags`` when present.
     """
     duration_min = (
         F.unix_timestamp("lpep_dropoff_datetime") - F.unix_timestamp("lpep_pickup_datetime")
@@ -148,6 +168,8 @@ def build_green_silver(df: DataFrame, run_id: str) -> DataFrame:
     payment_map_expr = F.create_map(
         *[item for pair in [(F.lit(k), F.lit(v)) for k, v in PAYMENT_TYPE_MAP.items()] for item in pair]
     )
+
+    has_flags = "quality_flags" in df.columns
 
     silver = df.select(
         F.col("VendorID").cast("int").alias("vendor_id"),
@@ -192,28 +214,42 @@ def build_green_silver(df: DataFrame, run_id: str) -> DataFrame:
             payment_map_expr[F.col("payment_type").cast("int")].alias("payment_type"),
         ).alias("financials"),
 
+        # ── Quality Flags ─────────────────────────────────────────────────────
+        *([
+            F.col("quality_flags")
+        ] if has_flags else []),
+
+        # ── Metadata (with Bronze lineage) ────────────────────────────────────
         F.struct(
             F.lit("green").alias("vehicle_type"),
             F.lit(run_id).alias("run_id"),
+            F.col("_meta.run_id").alias("bronze_run_id"),
+            F.col("_meta.source_file").alias("source_file"),
             F.current_timestamp().alias("processed_at"),
             F.year("lpep_pickup_datetime").alias("source_year"),
             F.month("lpep_pickup_datetime").alias("source_month"),
         ).alias("_meta"),
     )
 
-    logger.info("[SCHEMA] Green Silver schema applied.")
+    logger.info("[SCHEMA] Green Silver schema applied (with bronze lineage + quality_flags).")
     return silver
 
 
 def build_fhv_silver(df: DataFrame, run_id: str) -> DataFrame:
     """
     Transform a For-Hire Vehicle (FHV) Bronze DataFrame into the Silver schema.
+
     Since FHV has very few fields compared to Yellow/Green, missing fields
-    in 'metrics' and 'financials' are filled with nulls to maintain schema consistency.
+    in ``metrics`` and ``financials`` are filled with nulls to maintain
+    schema consistency across vehicle types.
+    Propagates ``bronze_run_id`` and ``source_file`` from the Bronze ``_meta``
+    and preserves ``quality_flags`` when present.
     """
     duration_min = (
         F.unix_timestamp("dropoff_datetime") - F.unix_timestamp("pickup_datetime")
     ) / 60.0
+
+    has_flags = "quality_flags" in df.columns
 
     silver = df.select(
         F.lit(None).cast("int").alias("vendor_id"),
@@ -258,27 +294,38 @@ def build_fhv_silver(df: DataFrame, run_id: str) -> DataFrame:
             F.lit(None).cast("string").alias("payment_type"),
         ).alias("financials"),
 
+        # ── Quality Flags ─────────────────────────────────────────────────────
+        *([
+            F.col("quality_flags")
+        ] if has_flags else []),
+
+        # ── Metadata (with Bronze lineage) ────────────────────────────────────
         F.struct(
             F.lit("fhv").alias("vehicle_type"),
             F.lit(run_id).alias("run_id"),
+            F.col("_meta.run_id").alias("bronze_run_id"),
+            F.col("_meta.source_file").alias("source_file"),
             F.current_timestamp().alias("processed_at"),
             F.year("pickup_datetime").alias("source_year"),
             F.month("pickup_datetime").alias("source_month"),
         ).alias("_meta"),
-        
+
         # FHV specific fields not fitting the standard pattern perfectly
         F.col("dispatching_base_num").alias("dispatching_base_num"),
         F.col("Affiliated_base_number").alias("affiliated_base_number"),
         F.col("SR_Flag").alias("sr_flag"),
     )
 
-    logger.info("[SCHEMA] FHV Silver schema applied.")
+    logger.info("[SCHEMA] FHV Silver schema applied (with bronze lineage + quality_flags).")
     return silver
 
 
 def build_hvfhv_silver(df: DataFrame, run_id: str) -> DataFrame:
     """
     Transform a High Volume FHV (HVFHV) Bronze DataFrame into the Silver schema.
+
+    Propagates ``bronze_run_id`` and ``source_file`` from the Bronze ``_meta``
+    and preserves ``quality_flags`` when present.
     """
     duration_min = (
         F.unix_timestamp("dropoff_datetime") - F.unix_timestamp("pickup_datetime")
@@ -289,6 +336,8 @@ def build_hvfhv_silver(df: DataFrame, run_id: str) -> DataFrame:
         if "cbd_congestion_fee" in df.columns
         else F.lit(None).cast("double")
     )
+
+    has_flags = "quality_flags" in df.columns
 
     silver = df.select(
         F.lit(None).cast("int").alias("vendor_id"),
@@ -330,18 +379,30 @@ def build_hvfhv_silver(df: DataFrame, run_id: str) -> DataFrame:
             F.col("congestion_surcharge").alias("congestion_surcharge"),
             cbd_fee.alias("cbd_congestion_fee"),
             # Compute total roughly for HVFHV
-            (F.col("base_passenger_fare") + F.col("tolls") + F.col("sales_tax") + F.col("congestion_surcharge") + F.col("tips") + F.col("bcf") + F.col("airport_fee")).alias("total_amount"),
+            (
+                F.col("base_passenger_fare") + F.col("tolls") + F.col("sales_tax")
+                + F.col("congestion_surcharge") + F.col("tips") + F.col("bcf")
+                + F.col("airport_fee")
+            ).alias("total_amount"),
             F.lit(None).cast("string").alias("payment_type"),
         ).alias("financials"),
 
+        # ── Quality Flags ─────────────────────────────────────────────────────
+        *([
+            F.col("quality_flags")
+        ] if has_flags else []),
+
+        # ── Metadata (with Bronze lineage) ────────────────────────────────────
         F.struct(
             F.lit("hvfhv").alias("vehicle_type"),
             F.lit(run_id).alias("run_id"),
+            F.col("_meta.run_id").alias("bronze_run_id"),
+            F.col("_meta.source_file").alias("source_file"),
             F.current_timestamp().alias("processed_at"),
             F.year("pickup_datetime").alias("source_year"),
             F.month("pickup_datetime").alias("source_month"),
         ).alias("_meta"),
-        
+
         # HVFHV specific fields
         F.col("hvfhs_license_num").alias("hvfhs_license_num"),
         F.col("dispatching_base_num").alias("dispatching_base_num"),
@@ -349,6 +410,6 @@ def build_hvfhv_silver(df: DataFrame, run_id: str) -> DataFrame:
         F.col("driver_pay").alias("driver_pay"),
     )
 
-    logger.info("[SCHEMA] HVFHV Silver schema applied.")
+    logger.info("[SCHEMA] HVFHV Silver schema applied (with bronze lineage + quality_flags).")
     return silver
 
