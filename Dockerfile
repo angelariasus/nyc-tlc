@@ -1,4 +1,6 @@
-FROM jupyter/pyspark-notebook:latest
+# Pin to Spark 3.4.x — matches spark-sql-kafka connector version in spark_utils.py.
+# Upgrading this tag requires also updating _KAFKA_SPARK_PKG in src/spark_utils.py.
+FROM jupyter/pyspark-notebook:spark-3.4.1
 
 USER root
 

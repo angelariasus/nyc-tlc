@@ -46,9 +46,10 @@ class Rule:
     condition: Callable[[DataFrame], Column]  # Returns a boolean Column (True = PASS)
 
 
-# ── Yellow / Green shared rules ───────────────────────────────────────────────
+# ── Shared rules (safe for ALL vehicle types with these columns) ───────────────
 
-YELLOW_GREEN_RULES: List[Rule] = [
+# Rules that apply ONLY to Yellow taxi (uses tpep_* datetime column names)
+YELLOW_RULES: List[Rule] = [
     Rule(
         name="valid_distance",
         description="Trip distance must be greater than zero.",
@@ -88,15 +89,62 @@ YELLOW_GREEN_RULES: List[Rule] = [
     ),
 ]
 
+# Rules that are truly shared between Yellow AND Green (no tpep_*/lpep_* references).
+# The time-order rule is intentionally EXCLUDED here because Yellow uses tpep_*
+# and Green uses lpep_* — applying the wrong one silently fails every record.
+YELLOW_GREEN_SHARED_RULES: List[Rule] = [
+    Rule(
+        name="valid_distance",
+        description="Trip distance must be greater than zero.",
+        condition=lambda df: F.col("trip_distance") > 0,
+    ),
+    Rule(
+        name="valid_fare",
+        description="Fare amount must not be negative.",
+        condition=lambda df: F.col("fare_amount") >= 0,
+    ),
+    Rule(
+        name="valid_total",
+        description="Total amount must not be negative.",
+        condition=lambda df: F.col("total_amount") >= 0,
+    ),
+    Rule(
+        name="valid_pickup_zone",
+        description="Pickup location ID must be in [1, 265].",
+        condition=lambda df: F.col("PULocationID").between(1, 265),
+    ),
+    Rule(
+        name="valid_dropoff_zone",
+        description="Dropoff location ID must be in [1, 265].",
+        condition=lambda df: F.col("DOLocationID").between(1, 265),
+    ),
+    Rule(
+        name="valid_passengers",
+        description="Passenger count must be between 1 and 8.",
+        condition=lambda df: F.col("passenger_count").between(1, 8),
+    ),
+]
+
+# Backwards-compatibility alias — existing notebooks that import YELLOW_GREEN_RULES
+# and use it with Yellow data will continue to work correctly since YELLOW_RULES
+# is a strict superset of the shared rules.
+# ⚠️  Do NOT use YELLOW_GREEN_RULES with Green data — use YELLOW_GREEN_SHARED_RULES
+# combined with GREEN_EXTRA_RULES instead.
+YELLOW_GREEN_RULES: List[Rule] = YELLOW_RULES
+
+
 GREEN_EXTRA_RULES: List[Rule] = [
     Rule(
         name="valid_time_order_green",
-        description="Dropoff datetime must be after pickup datetime (Green field names).",
+        description="Dropoff datetime must be after pickup datetime (Green lpep_* field names).",
         condition=lambda df: (
             F.col("lpep_dropoff_datetime") > F.col("lpep_pickup_datetime")
         ),
     ),
 ]
+
+# Full Green rules = shared column rules + lpep_* time-order rule
+GREEN_RULES: List[Rule] = YELLOW_GREEN_SHARED_RULES + GREEN_EXTRA_RULES
 
 # ── FHV rules ──────────────────────────────────────────────────────────────────
 
