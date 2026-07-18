@@ -4,6 +4,10 @@ Includes the MongoDB Spark Connector configuration.
 """
 from __future__ import annotations
 
+import os
+import glob
+from functools import reduce
+
 from pyspark.sql import DataFrame, SparkSession
 
 from core.audit.logger import setup_logger
@@ -59,6 +63,8 @@ def get_spark(
         .config("spark.sql.adaptive.enabled",                "true")
         .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
         .config("spark.sql.sources.partitionOverwriteMode",  "dynamic")
+        .config("spark.sql.parquet.enableVectorizedReader",  "false")
+        .config("spark.sql.parquet.mergeSchema",             "false")
         .config("spark.ui.showConsoleProgress",              "false")
         # MongoDB Spark Connector
         .config("spark.jars.packages", _MONGO_SPARK_PKG)
@@ -127,6 +133,8 @@ def get_spark_streaming(
         .config("spark.sql.parquet.compression.codec",       "snappy")
         .config("spark.sql.adaptive.enabled",                "true")
         .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
+        .config("spark.sql.parquet.enableVectorizedReader",  "false")
+        .config("spark.sql.parquet.mergeSchema",             "false")
         .config("spark.ui.showConsoleProgress",              "false")
         # Combined packages: MongoDB + Kafka
         .config("spark.jars.packages", packages)
@@ -215,9 +223,21 @@ def write_mongo(
 # ── Parquet I/O helpers ───────────────────────────────────────────────────────
 
 def read_parquet(spark: SparkSession, path: str) -> DataFrame:
-    """Read one or more Parquet file(s) from the local path."""
-    df = spark.read.parquet(path)
-    logger.info(f"[SPARK] Read Parquet ← {path}")
+    """Read one or more Parquet file(s) from the local path with robust type promotion."""
+    # Si la ruta es un directorio, recolectamos los archivos individualmente.
+    # Esto permite usar unionByName, que inyecta CASTs logicos (INT->BIGINT) automaticamente 
+    # y evita que el motor Parquet a bajo nivel explote por discrepancias de tipos.
+    if os.path.isdir(path):
+        files = glob.glob(os.path.join(path, "*.parquet"))
+        if not files:
+            df = spark.read.parquet(path)
+        else:
+            dfs = [spark.read.parquet(f) for f in files]
+            df = reduce(lambda d1, d2: d1.unionByName(d2, allowMissingColumns=True), dfs)
+    else:
+        df = spark.read.parquet(path)
+        
+    logger.info(f"[SPARK] Read Parquet ← {path} (Robust Mode)")
     return df
 
 
