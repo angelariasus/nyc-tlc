@@ -4,7 +4,7 @@ El dataset de Green Taxi abarca los "Boro Taxis" (verdes), autorizados a recoger
 
 **Score Global de Calidad: 95.33%**
 
-## Dimensiones Evaluadas (Detalle Tabular)
+## Dimensiones Evaluadas
 
 ### Dimension 1: Completitud
 

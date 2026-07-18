@@ -4,7 +4,7 @@ El conjunto de datos FHV comprende vehículos de alquiler (Livery, Black Car, Lu
 
 **Score Global de Calidad: 97.48%**
 
-## Dimensiones Evaluadas (Detalle Tabular)
+## Dimensiones Evaluadas
 
 ### Dimension 1: Completitud
 

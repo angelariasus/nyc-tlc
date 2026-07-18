@@ -4,7 +4,7 @@ El dataset de HVFHV es el más gigantesco del proyecto. Engloba los despachos de
 
 **Score Global de Calidad: 97.41%**
 
-## Dimensiones Evaluadas (Detalle Tabular)
+## Dimensiones Evaluadas
 
 ### Dimension 1: Completitud
 

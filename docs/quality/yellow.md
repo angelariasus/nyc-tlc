@@ -5,7 +5,7 @@ Este conjunto es uno de los más grandes y de mayor calidad de la TLC.
 
 **Score Global de Calidad: 92.12%**
 
-## Dimensiones Evaluadas (Detalle Tabular)
+## Dimensiones Evaluadas
 
 ### Dimension 1: Completitud
 
