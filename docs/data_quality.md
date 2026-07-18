@@ -29,3 +29,12 @@ During the transition from **Bronze to Silver**, PySpark DataFrames are evaluate
 - `no_negative_pay`: Driver pay and base passenger fare >= 0.
 
 By capturing bad data in the `quarantine` collection instead of silently dropping it, data engineers can analyze anomaly trends over time without polluting the analytical Silver/Gold layers.
+
+## Reportes Exhaustivos de Calidad por Vehículo
+
+Para consultar los scores de calidad específicos, las dimensiones evaluadas (Completitud, Exactitud, etc.) y los resultados visuales de cada set de datos, visite los siguientes reportes:
+
+- [Análisis Detallado Yellow Taxi](quality/yellow.md)
+- [Análisis Detallado Green Taxi](quality/green.md)
+- [Análisis Detallado FHV](quality/fhv.md)
+- [Análisis Detallado HVFHV](quality/hvfhv.md)
