@@ -87,6 +87,26 @@ YELLOW_RULES: List[Rule] = [
         description="Passenger count must be between 1 and 8.",
         condition=lambda df: F.col("passenger_count").between(1, 8),
     ),
+    Rule(
+        name="valid_vendor",
+        description="VendorID must be strictly 1 or 2.",
+        condition=lambda df: F.col("VendorID").isin([1, 2]),
+    ),
+    Rule(
+        name="valid_ratecode",
+        description="RatecodeID must be in [1, 2, 3, 4, 5, 6, 99].",
+        condition=lambda df: F.col("RatecodeID").isin([1, 2, 3, 4, 5, 6, 99]),
+    ),
+    Rule(
+        name="valid_payment_type",
+        description="Payment type must be in [1, 2, 3, 4, 5, 6].",
+        condition=lambda df: F.col("payment_type").isin([1, 2, 3, 4, 5, 6]),
+    ),
+    Rule(
+        name="valid_pickup_year_yellow",
+        description="Pickup year must be >= 2023.",
+        condition=lambda df: F.year("tpep_pickup_datetime") >= 2023,
+    ),
 ]
 
 # Rules that are truly shared between Yellow AND Green (no tpep_*/lpep_* references).
@@ -123,6 +143,21 @@ YELLOW_GREEN_SHARED_RULES: List[Rule] = [
         description="Passenger count must be between 1 and 8.",
         condition=lambda df: F.col("passenger_count").between(1, 8),
     ),
+    Rule(
+        name="valid_vendor",
+        description="VendorID must be strictly 1 or 2.",
+        condition=lambda df: F.col("VendorID").isin([1, 2]),
+    ),
+    Rule(
+        name="valid_ratecode",
+        description="RatecodeID must be in [1, 2, 3, 4, 5, 6, 99].",
+        condition=lambda df: F.col("RatecodeID").isin([1, 2, 3, 4, 5, 6, 99]),
+    ),
+    Rule(
+        name="valid_payment_type",
+        description="Payment type must be in [1, 2, 3, 4, 5, 6].",
+        condition=lambda df: F.col("payment_type").isin([1, 2, 3, 4, 5, 6]),
+    ),
 ]
 
 # Backwards-compatibility alias — existing notebooks that import YELLOW_GREEN_RULES
@@ -141,6 +176,16 @@ GREEN_EXTRA_RULES: List[Rule] = [
             F.col("lpep_dropoff_datetime") > F.col("lpep_pickup_datetime")
         ),
     ),
+    Rule(
+        name="valid_trip_type_green",
+        description="Trip type must be 1 (street-hail) or 2 (dispatch).",
+        condition=lambda df: F.col("trip_type").isin([1, 2]),
+    ),
+    Rule(
+        name="valid_pickup_year_green",
+        description="Pickup year must be >= 2023.",
+        condition=lambda df: F.year("lpep_pickup_datetime") >= 2023,
+    ),
 ]
 
 # Full Green rules = shared column rules + lpep_* time-order rule
@@ -151,13 +196,13 @@ GREEN_RULES: List[Rule] = YELLOW_GREEN_SHARED_RULES + GREEN_EXTRA_RULES
 FHV_RULES: List[Rule] = [
     Rule(
         name="valid_pickup_zone",
-        description="Pickup location ID must be in [1, 265].",
-        condition=lambda df: F.col("PULocationID").between(1, 265),
+        description="Pickup location ID must be in [1, 265] or null.",
+        condition=lambda df: F.col("PULocationID").between(1, 265) | F.col("PULocationID").isNull(),
     ),
     Rule(
         name="valid_dropoff_zone",
-        description="Dropoff location ID must be in [1, 265].",
-        condition=lambda df: F.col("DOLocationID").between(1, 265),
+        description="Dropoff location ID must be in [1, 265] or null.",
+        condition=lambda df: F.col("DOLocationID").between(1, 265) | F.col("DOLocationID").isNull(),
     ),
     Rule(
         name="valid_time_order",
@@ -165,6 +210,11 @@ FHV_RULES: List[Rule] = [
         condition=lambda df: (
             F.col("dropoff_datetime") > F.col("pickup_datetime")
         ),
+    ),
+    Rule(
+        name="valid_dispatching_base",
+        description="Dispatching base num must start with 'B'.",
+        condition=lambda df: F.col("dispatching_base_num").startswith("B"),
     ),
 ]
 
@@ -194,6 +244,16 @@ HVFHV_RULES: List[Rule] = [
         condition=lambda df: (
             (F.col("driver_pay") >= 0) & (F.col("base_passenger_fare") >= 0)
         ),
+    ),
+    Rule(
+        name="valid_request_time",
+        description="Pickup datetime must be at or after request datetime.",
+        condition=lambda df: F.col("pickup_datetime") >= F.col("request_datetime"),
+    ),
+    Rule(
+        name="valid_hvfhs_license",
+        description="HVFHV license must be in the approved list.",
+        condition=lambda df: F.col("hvfhs_license_num").isin(['HV0002', 'HV0003', 'HV0004', 'HV0005']),
     ),
 ]
 

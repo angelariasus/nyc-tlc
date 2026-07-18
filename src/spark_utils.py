@@ -187,6 +187,7 @@ def write_mongo(
     database: str,
     collection: str,
     mode: str = "append",
+    num_rows: int = None
 ) -> int:
     """
     Write a Spark DataFrame to a MongoDB collection.
@@ -199,23 +200,29 @@ def write_mongo(
         Target MongoDB namespace.
     mode:
         ``"append"`` (default) or ``"overwrite"``.
+    num_rows:
+        Optional pre-calculated row count to avoid df.count() triggering double reads.
 
     Returns
     -------
     int
-        Number of rows written.
+        Number of rows written (if provided, else 0).
     """
-    n = df.count()
     uri = settings.mongo_spark_uri(database, collection)
     (
         df.write
         .format("mongodb")
         .option("connection.uri", uri)
+        .option("ordered", "false")          # Unordered bulk insert para maxima velocidad
+        .option("maxBatchSize", "100000")    # Lotes masivos
         .mode(mode)
         .save()
     )
+    
+    n = num_rows if num_rows is not None else 0
+    display_n = f"{n:,}" if num_rows is not None else "Unknown"
     logger.info(
-        f"[SPARK] Wrote {n:,} rows → MongoDB {database}.{collection} (mode={mode})"
+        f"[SPARK] Wrote {display_n} rows → MongoDB {database}.{collection} (mode={mode})"
     )
     return n
 
@@ -237,6 +244,13 @@ def read_parquet(spark: SparkSession, path: str) -> DataFrame:
     else:
         df = spark.read.parquet(path)
         
+    # FIX: MongoDB Connector doesn't support TimestampNTZType. Cast to TimestampType
+    from pyspark.sql.types import TimestampType
+    import pyspark.sql.functions as F
+    for field in df.schema.fields:
+        if type(field.dataType).__name__ == "TimestampNTZType":
+            df = df.withColumn(field.name, F.col(field.name).cast(TimestampType()))
+
     logger.info(f"[SPARK] Read Parquet ← {path} (Robust Mode)")
     return df
 
