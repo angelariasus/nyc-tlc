@@ -17,6 +17,7 @@ env/
 # Data (large files managed outside version control)
 data/raw/
 data/audit/
+data/silver/
 data/.state.json
 logs/
 

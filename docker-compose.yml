@@ -17,6 +17,14 @@ services:
       - ./data:/data/import:ro
     networks:
       - tlc_network
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 10G
+        reservations:
+          cpus: '4'
+          memory: 4G
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
       interval: 10s
@@ -40,6 +48,11 @@ services:
       - "8082:8081"
     networks:
       - tlc_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   # ── Apache Kafka 3.7 (KRaft mode — no Zookeeper needed) ─────────────────────
   #
@@ -87,6 +100,14 @@ services:
       - tlc_kafka_data:/tmp/kraft-combined-logs
     networks:
       - tlc_network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
       interval: 15s
@@ -115,6 +136,11 @@ services:
       DYNAMIC_CONFIG_ENABLED: "true"
     networks:
       - tlc_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   # ── Jupyter PySpark (custom image with Mongo connector) ──────────────────────
   jupyter-pyspark:
@@ -149,8 +175,8 @@ services:
       MONGO_DB_GOLD:   tlc_gold
       MONGO_DB_AUDIT:  tlc_audit
       TLC_DATA_URL: https://d37ci6vzurychx.cloudfront.net/trip-data
-      SPARK_DRIVER_MEMORY: ${SPARK_DRIVER_MEMORY:-4g}
-      SPARK_EXECUTOR_MEMORY: ${SPARK_EXECUTOR_MEMORY:-4g}
+      SPARK_DRIVER_MEMORY: ${SPARK_DRIVER_MEMORY:-8g}
+      SPARK_EXECUTOR_MEMORY: ${SPARK_EXECUTOR_MEMORY:-8g}
       # Kafka bootstrap — accessible internally via the tlc_network
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_TOPIC_YELLOW_2026: tlc-yellow-2026
@@ -160,11 +186,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '6'
-          memory: 16G
+          cpus: '8'
+          memory: 14G
         reservations:
-          cpus: '2'
-          memory: 4G
+          cpus: '4'
+          memory: 6G
 
 volumes:
   tlc_mongodb_data:
