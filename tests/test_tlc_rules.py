@@ -15,6 +15,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 @pytest.fixture(scope="module")
 def spark():
     """Minimal SparkSession for unit tests (no Mongo connector needed)."""
+    import os
+    import sys
+    os.environ["PYSPARK_PYTHON"] = sys.executable
+    os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
+
     from pyspark.sql import SparkSession
 
     return (
@@ -44,6 +49,8 @@ def sample_yellow_df(spark):
         StructField("DOLocationID",            IntegerType()),
         StructField("fare_amount",             DoubleType()),
         StructField("total_amount",            DoubleType()),
+        StructField("RatecodeID",              IntegerType()),
+        StructField("payment_type",            IntegerType()),
     ])
 
     t1 = datetime(2025, 1, 15, 10, 0, 0)
@@ -52,15 +59,15 @@ def sample_yellow_df(spark):
 
     data = [
         # Valid record
-        (1, t1, t2, 2, 4.5, 142, 230, 18.5, 24.0),
+        (1, t1, t2, 2, 4.5, 142, 230, 18.5, 24.0, 1, 1),
         # Invalid: zero distance
-        (1, t1, t2, 1, 0.0, 100, 200, 10.0, 12.0),
+        (1, t1, t2, 1, 0.0, 100, 200, 10.0, 12.0, 1, 1),
         # Invalid: negative fare
-        (1, t1, t2, 1, 3.0, 50, 60, -5.0, -5.0),
+        (1, t1, t2, 1, 3.0, 50, 60, -5.0, -5.0, 1, 1),
         # Invalid: dropoff before pickup
-        (1, t1, t0, 1, 2.0, 75, 80, 8.0, 10.0),
+        (1, t1, t0, 1, 2.0, 75, 80, 8.0, 10.0, 1, 1),
         # Invalid: out-of-range location
-        (1, t1, t2, 1, 1.0, 0, 266, 5.0, 6.0),
+        (1, t1, t2, 1, 1.0, 0, 266, 5.0, 6.0, 1, 1),
     ]
 
     return spark.createDataFrame(data, schema)
