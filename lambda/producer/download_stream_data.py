@@ -9,7 +9,7 @@ from src.paths import ensure_dirs, iter_download_targets, str_path
 from core.config.settings import settings
 
 # ── Historical scope (Bulk Batch for Bronze) ──────────────────────────────────
-YEARS         = [2019, 2020, 2021, 2022, 2023, 2024, 2025]
+YEARS         = [2026]
 MONTHS        = list(range(1, 13))  # 1-12 for all months
 VEHICLE_TYPES = ["yellow", "green", "fhv", "hvfhv"]  # Add "fhv", "hvfhv" as needed
 SKIP_EXISTING = True  # Set False to re-download existing files

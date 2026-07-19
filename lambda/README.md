@@ -2,7 +2,7 @@
 
 This directory contains the **Speed Layer** of the NYC TLC Data Lakehouse, implemented entirely in pure Python.
 
-While the historical batch processing (the Medallion Architecture for 2019–2025 data) resides in `/notebooks` and `/src`, this folder contains the real-time processing pipelines for the 2026 data stream.
+While the historical batch processing (the Medallion Architecture for 2019â€“2025 data) resides in `/notebooks` and `/src`, this folder contains the real-time processing pipelines for the 2026 data stream.
 
 ## Structure
 
@@ -20,9 +20,11 @@ While the historical batch processing (the Medallion Architecture for 2019–2025 
 To see the real-time pipeline and dashboard in action:
 
 1. **Start the Producer (Simulator)**
+   By default, it uses a ThreadPool to simulate all 4 vehicle types (`yellow`, `green`, `fhv`, `hvfhv`) concurrently:
    ```bash
    python lambda/producer/kafka_simulator.py
    ```
+   *(To test a single type, you can pass it as an argument: `python lambda/producer/kafka_simulator.py yellow`)*
 2. **Start the Silver Consumers** (You can run these in separate terminals)
    ```bash
    python lambda/speed_layer/silver_stream_yellow.py
