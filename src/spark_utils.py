@@ -65,7 +65,7 @@ def get_spark(
         .config("spark.sql.sources.partitionOverwriteMode",  "dynamic")
         .config("spark.sql.parquet.enableVectorizedReader",  "false")
         .config("spark.sql.parquet.mergeSchema",             "false")
-        .config("spark.ui.showConsoleProgress",              "false")
+        .config("spark.ui.showConsoleProgress",              "true")
         # MongoDB Spark Connector
         .config("spark.jars.packages", _MONGO_SPARK_PKG)
         .config("spark.mongodb.read.connection.uri",  settings.mongo_uri())
@@ -135,7 +135,7 @@ def get_spark_streaming(
         .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
         .config("spark.sql.parquet.enableVectorizedReader",  "false")
         .config("spark.sql.parquet.mergeSchema",             "false")
-        .config("spark.ui.showConsoleProgress",              "false")
+        .config("spark.ui.showConsoleProgress",              "true")
         # Combined packages: MongoDB + Kafka
         .config("spark.jars.packages", packages)
         # MongoDB Spark Connector

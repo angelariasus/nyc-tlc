@@ -303,7 +303,7 @@ def apply_quality_flags(
     reason_expr: Column = F.lit(None).cast("string")
 
     for rule in rules:
-        passes = rule.condition(df)
+        passes = F.coalesce(rule.condition(df).cast("boolean"), F.lit(False))
         flag_columns.append(passes.alias(rule.name))
         is_valid_expr = is_valid_expr & passes
         # reason_expr captures the FIRST failing rule
