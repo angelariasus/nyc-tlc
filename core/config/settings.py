@@ -80,6 +80,7 @@ class Settings:
     SPARK_MASTER:         str = os.getenv("SPARK_MASTER",   "local[*]")
     SPARK_DRIVER_MEMORY:  str = os.getenv("SPARK_DRIVER_MEMORY",  "4g")
     SPARK_EXECUTOR_MEMORY: str = os.getenv("SPARK_EXECUTOR_MEMORY", "4g")
+    SPARK_SHUFFLE_PARTITIONS: str = os.getenv("SPARK_SHUFFLE_PARTITIONS", "200")
 
     # ── HTTP
     HTTP_TIMEOUT:    int   = int(os.getenv("HTTP_TIMEOUT",    "300"))
