@@ -65,7 +65,8 @@ class Settings:
     MONGO_DB_BRONZE: str = os.getenv("MONGO_DB_BRONZE", "tlc_bronze")
     MONGO_DB_SILVER: str = os.getenv("MONGO_DB_SILVER", "tlc_silver")
     MONGO_DB_GOLD:   str = os.getenv("MONGO_DB_GOLD",   "tlc_gold")
-    MONGO_DB_AUDIT:  str = os.getenv("MONGO_DB_AUDIT",  "tlc_audit")
+    MONGO_DB_AUDIT:       str = os.getenv("MONGO_DB_AUDIT",       "tlc_audit")
+    MONGO_DB_GOLD_STREAM: str = os.getenv("MONGO_DB_GOLD_STREAM", "tlc_gold_stream")
 
     # ── Paths
     PROJECT_ROOT: Path = PROJECT_ROOT
