@@ -67,10 +67,15 @@ def get_spark(
         .config("spark.sql.parquet.enableVectorizedReader",  "false")
         .config("spark.sql.parquet.mergeSchema",             "false")
         .config("spark.ui.showConsoleProgress",              "true")
+        # Configuración Avanzada de AQE y Serialización
+        .config("spark.sql.adaptive.skewJoin.enabled",       "true")
+        .config("spark.serializer",                          "org.apache.spark.serializer.KryoSerializer")
         # MongoDB Spark Connector
         .config("spark.jars.packages", _MONGO_SPARK_PKG)
         .config("spark.mongodb.read.connection.uri",  settings.mongo_uri())
         .config("spark.mongodb.write.connection.uri", settings.mongo_uri())
+        .config("spark.mongodb.read.partitioner",     "com.mongodb.spark.sql.connector.read.partitioner.SamplePartitioner")
+        .config("spark.mongodb.read.partitionerOptions.partitionSizeMB", "64")
         .getOrCreate()
     )
 
@@ -216,7 +221,7 @@ def write_mongo(
         .format("mongodb")
         .option("connection.uri", uri)
         .option("ordered", "false")          # Unordered bulk insert para maxima velocidad
-        .option("maxBatchSize", "100000")    # Lotes masivos
+        .option("maxBatchSize", "2048")      # Reducido de 100000 para evitar OOM
         .mode(mode)
         .save()
     )

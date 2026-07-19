@@ -3,6 +3,7 @@ services:
   # ── MongoDB 7.0 ──────────────────────────────────────────────────────────────
   mongodb:
     image: mongo:7.0
+    command: ["--wiredTigerCacheSizeGB", "2"]
     container_name: tlc_mongodb
     restart: always
     environment:
@@ -21,7 +22,7 @@ services:
       resources:
         limits:
           cpus: '8'
-          memory: 10G
+          memory: 6G
         reservations:
           cpus: '4'
           memory: 4G
@@ -187,7 +188,7 @@ services:
       resources:
         limits:
           cpus: '24'
-          memory: 24G
+          memory: 18G
         reservations:
           cpus: '4'
           memory: 6G
