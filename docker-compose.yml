@@ -193,6 +193,77 @@ services:
           cpus: '4'
           memory: 6G
 
+  
+  # ==============================================================================
+  # -- LAMBDA SPEED LAYER SERVICES (Real-time Streaming) -------------------------
+  # ==============================================================================
+  x-lambda-base: &lambda-base
+    build: .
+    restart: always
+    volumes:
+      - .:/home/jovyan/work
+    environment:
+      MONGO_HOST: mongodb
+      MONGO_PORT: "27017"
+      MONGO_USER: ${MONGO_USER:-admin}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:-password123}
+      MONGO_AUTH_DB: admin
+      MONGO_DB_BRONZE: tlc_bronze
+      MONGO_DB_SILVER: tlc_silver
+      MONGO_DB_GOLD:   tlc_gold
+      MONGO_DB_GOLD_STREAM: tlc_gold_stream
+      MONGO_DB_AUDIT:  tlc_audit
+      TLC_DATA_URL: https://d37ci6vzurychx.cloudfront.net/trip-data
+      SPARK_DRIVER_MEMORY: "2g"
+      SPARK_EXECUTOR_MEMORY: "2g"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC_YELLOW_2026: tlc-yellow-2026
+      KAFKA_TOPIC_GREEN_2026:  tlc-green-2026
+      KAFKA_TOPIC_FHV_2026:    tlc-fhv-2026
+      KAFKA_TOPIC_HVFHV_2026:  tlc-hvfhv-2026
+    networks:
+      - tlc_network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  lambda-simulator:
+    <<: *lambda-base
+    container_name: tlc_lambda_simulator
+    command: ["python", "lambda/producer/kafka_simulator.py"]
+
+  lambda-silver-yellow:
+    <<: *lambda-base
+    container_name: tlc_lambda_silver_yellow
+    command: ["python", "lambda/speed_layer/silver_stream_yellow.py"]
+
+  lambda-silver-green:
+    <<: *lambda-base
+    container_name: tlc_lambda_silver_green
+    command: ["python", "lambda/speed_layer/silver_stream_green.py"]
+
+  lambda-silver-fhv:
+    <<: *lambda-base
+    container_name: tlc_lambda_silver_fhv
+    command: ["python", "lambda/speed_layer/silver_stream_fhv.py"]
+
+  lambda-silver-hvfhv:
+    <<: *lambda-base
+    container_name: tlc_lambda_silver_hvfhv
+    command: ["python", "lambda/speed_layer/silver_stream_hvfhv.py"]
+
+  lambda-gold-marts:
+    <<: *lambda-base
+    container_name: tlc_lambda_gold_marts
+    command: ["python", "lambda/speed_layer/gold_stream_marts.py"]
+
+  lambda-ml-inference:
+    <<: *lambda-base
+    container_name: tlc_lambda_ml_inference
+    command: ["python", "lambda/speed_layer/ml_stream_inference.py"]
+
 volumes:
   tlc_mongodb_data:
   tlc_mongodb_config:
@@ -201,3 +272,4 @@ volumes:
 networks:
   tlc_network:
     driver: bridge
+

@@ -31,10 +31,6 @@ st.markdown("""
         display: inline-block; background: rgba(16,185,129,0.15); border: 1px solid #10b981;
         color: #10b981; border-radius: 20px; padding: 2px 10px; font-size: 0.75rem; font-weight: 600; margin-left: 8px;
     }
-    .badge-batch {
-        display: inline-block; background: rgba(99,102,241,0.15); border: 1px solid #6366f1;
-        color: #6366f1; border-radius: 20px; padding: 2px 10px; font-size: 0.75rem; font-weight: 600; margin-left: 8px;
-    }
     .arch-box {
         background: rgba(246,201,14,0.05); border: 1px solid rgba(246,201,14,0.2);
         border-radius: 12px; padding: 1.2rem 1.5rem; margin-top: 1.5rem; color: #94a3b8; font-size: 0.88rem;
@@ -43,58 +39,28 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Header ────────────────────────────────────────────────────────────────────
-st.markdown('<div class="main-title">🚕 NYC TLC Analytics Platform</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Lambda Architecture · PySpark · Kafka · MongoDB · Streamlit</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🚕 NYC TLC Real-Time Analytics</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Lambda Architecture · Speed Layer (2026)</div>', unsafe_allow_html=True)
 
-# ── Pages ─────────────────────────────────────────────────────────────────────
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("""
-    <div class="page-card">
-        <h3>⚡ Lambda Live (2026) <span class="badge-live">SPEED LAYER</span></h3>
-        <p>Dashboard en tiempo real del año 2026. Monitorea viajes, ingresos y anomalías
-        detectadas por Isolation Forest mientras Kafka produce datos en vivo.
-        Se auto-actualiza cada 10 segundos.</p>
-    </div>
-    """, unsafe_allow_html=True)
-    st.markdown("""
-    <div class="page-card">
-        <h3>🛡️ Audit &amp; Quality Control</h3>
-        <p>Salud del pipeline: throughput, tiempos de ejecución, tasa de cuarentena
-        e inspección de registros rechazados para todos los vehículos y modos.</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col2:
-    st.markdown("""
-    <div class="page-card">
-        <h3>📊 Historical Batch (2019–2025) <span class="badge-batch">BATCH LAYER</span></h3>
-        <p>Análisis histórico comparativo de la capa Gold. Tendencias de demanda,
-        ingresos por zona, segmentación KMeans y distribución de anomalías
-        para contrastar con los datos en vivo de 2026.</p>
-    </div>
-    """, unsafe_allow_html=True)
-    st.markdown("""
-    <div class="page-card">
-        <h3>🔮 ML Insights (Próximamente)</h3>
-        <p>Pronóstico SARIMA de demanda horaria, segmentación geoespacial
-        y clasificación de propinas con Random Forest.</p>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown("""
+<div class="page-card">
+    <h3>⚡ Lambda Live Dashboard <span class="badge-live">SPEED LAYER</span></h3>
+    <p>Visualización en tiempo real del tráfico de Nueva York (2026). Monitorea viajes, 
+    ingresos y anomalías detectadas por Machine Learning (Isolation Forest) mientras Kafka produce datos en vivo. 
+    Selecciona la página en el menú lateral para iniciar.</p>
+</div>
+""", unsafe_allow_html=True)
 
 # ── Architecture diagram ───────────────────────────────────────────────────────
 st.markdown("""
 <div class="arch-box">
-<strong style="color:#f6c90e">Arquitectura Lambda — Flujo de datos:</strong><br>
+<strong style="color:#f6c90e">Arquitectura Lambda — Flujo de Streaming:</strong><br>
 <code style="color:#a5b4fc">
-[TLC 2026 Parquet] → Kafka Producer → 4 Topics (yellow/green/fhv/hvfhv)<br>
-  ↓ Speed Layer (Streaming en vivo)<br>
+[Simulador Parquet] → Kafka Producer → 4 Topics (yellow/green/fhv/hvfhv)<br>
+  ↓ <br>
   Silver Streams × 4 → tlc_silver → Gold Stream Marts + ML Inference → tlc_gold_stream<br>
-  ↓ Batch Layer (histórico 2019–2025)<br>
-  Bronze Ingestion → Silver → Gold Marts + ML Training → tlc_gold<br>
-  ↓ Serving Layer<br>
-  Streamlit: combina tlc_gold (histórico) + tlc_gold_stream (2026 en vivo)
+  ↓ <br>
+  Streamlit: Combina datos históricos (Power BI/tlc_gold) con la inyección en vivo.
 </code>
 </div>
 """, unsafe_allow_html=True)
@@ -124,5 +90,5 @@ except Exception as e:
     st.sidebar.error(f"🔴 MongoDB Failed: {e}")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("**👈 Select a dashboard**")
-st.sidebar.markdown("*v2.0 · Lambda Architecture*")
+st.sidebar.markdown("**👈 Select the Live Dashboard**")
+st.sidebar.markdown("*v2.0 · Lambda Speed Layer*")

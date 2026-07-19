@@ -162,15 +162,31 @@ def render():
         df_fin = df_fin[df_fin["vehicle_type"].isin(vt_filter)]
 
     with placeholder.container():
-        # ── KPI Cards ───────────────────────────────────────────────────────────
-        st.markdown('<div class="section-title">📊 Global KPIs — 2026 Acumulado</div>', unsafe_allow_html=True)
+        # ── Fetch Historical Totals (Batch Layer) ──────────────────────────────
+        try:
+            hist_demand_docs = list(client["tlc_gold"]["mart_demand_volume"].find({}, {"_id": 0, "total_trips": 1}))
+            hist_fin_docs = list(client["tlc_gold"]["mart_financial_performance"].find({}, {"_id": 0, "total_revenue": 1, "total_tips": 1}))
+            
+            hist_trips = sum(d.get("total_trips", 0) for d in hist_demand_docs)
+            hist_revenue = sum(d.get("total_revenue", 0) for d in hist_fin_docs)
+            hist_tips = sum(d.get("total_tips", 0) for d in hist_fin_docs)
+        except Exception:
+            hist_trips, hist_revenue, hist_tips = 0, 0, 0
+
+        # ── Global KPIs (Lambda = Batch + Speed) ──────────────────────────────
+        st.markdown('<div class="section-title">📊 Global KPIs — Lambda Unified (Batch 19-25 + Live 2026)</div>', unsafe_allow_html=True)
         kc1, kc2, kc3, kc4, kc5 = st.columns(5)
 
-        total_trips   = int(df_demand["total_trips"].sum())   if not df_demand.empty else 0
-        total_revenue = float(df_fin["total_revenue"].sum())  if not df_fin.empty else 0.0
-        total_tips    = float(df_fin["total_tips"].sum())      if not df_fin.empty else 0.0
+        live_trips   = int(df_demand["total_trips"].sum())   if not df_demand.empty else 0
+        live_revenue = float(df_fin["total_revenue"].sum())  if not df_fin.empty else 0.0
+        live_tips    = float(df_fin["total_tips"].sum())      if not df_fin.empty else 0.0
+        
+        lambda_trips = hist_trips + live_trips
+        lambda_revenue = hist_revenue + live_revenue
+        lambda_tips = hist_tips + live_tips
+        
         total_anom    = len(df_anom)
-        anom_rate     = (total_anom / total_trips * 100) if total_trips > 0 else 0.0
+        anom_rate     = (total_anom / live_trips * 100) if live_trips > 0 else 0.0
 
         # Pipeline throughput from audit
         if not df_audit.empty:
@@ -186,26 +202,29 @@ def render():
         with kc1:
             st.markdown(f"""
             <div class="kpi-card">
-                <div class="kpi-value">{total_trips:,}</div>
-                <div class="kpi-label">Total Viajes 2026</div>
+                <div class="kpi-value">{lambda_trips / 1e6:.1f}M</div>
+                <div class="kpi-label">Total Viajes (All-Time)</div>
+                <div class="kpi-delta">+{live_trips:,} live</div>
             </div>""", unsafe_allow_html=True)
         with kc2:
             st.markdown(f"""
             <div class="kpi-card">
-                <div class="kpi-value">${total_revenue:,.0f}</div>
-                <div class="kpi-label">Ingresos Acumulados</div>
+                <div class="kpi-value">${lambda_revenue / 1e9:.2f}B</div>
+                <div class="kpi-label">Ingresos (All-Time)</div>
+                <div class="kpi-delta">+${live_revenue:,.0f} live</div>
             </div>""", unsafe_allow_html=True)
         with kc3:
             st.markdown(f"""
             <div class="kpi-card">
-                <div class="kpi-value">${total_tips:,.0f}</div>
-                <div class="kpi-label">Propinas Acumuladas</div>
+                <div class="kpi-value">${lambda_tips / 1e6:.1f}M</div>
+                <div class="kpi-label">Propinas (All-Time)</div>
+                <div class="kpi-delta">+${live_tips:,.0f} live</div>
             </div>""", unsafe_allow_html=True)
         with kc4:
             st.markdown(f"""
             <div class="kpi-card">
                 <div class="kpi-value" style="color:#ef4444">{total_anom:,}</div>
-                <div class="kpi-label">Anomalías Detectadas</div>
+                <div class="kpi-label">Anomalías Detectadas (Live)</div>
                 <div class="kpi-delta">{anom_rate:.2f}% tasa</div>
             </div>""", unsafe_allow_html=True)
         with kc5:
@@ -213,6 +232,7 @@ def render():
             <div class="kpi-card">
                 <div class="kpi-value" style="color:#10b981">{avg_throughput:,.0f}</div>
                 <div class="kpi-label">Throughput (rec/s)</div>
+                <div class="kpi-delta">Kafka Streaming</div>
             </div>""", unsafe_allow_html=True)
 
         # ── Demand over time ──────────────────────────────────────────────────

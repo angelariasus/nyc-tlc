@@ -148,35 +148,46 @@ Este documento contiene la estructura exacta de las tablas que se exportarán de
 
 ---
 
-## 8. `ml_segmentation` (Dashboard 9)
+## 8. `ml_zone_segments` (Dashboard 9)
 **Propósito:** Clusters espaciales de Zonas (K-Means) según perfil de viaje.
 
 | Columna | Tipo de Dato | Descripción |
 | :--- | :--- | :--- |
-| `zone_id` | Número Entero | ID de la zona |
+| `pickup_zone_id` | Número Entero | ID de la zona de recogida |
 | `zone_name` | Texto | Nombre de la zona |
 | `borough` | Texto | Distrito |
-| `service_zone` | Texto | Tipo de zona de TLC |
 | `cluster` | Número Entero | ID del cluster asignado (0, 1, 2, 3...) |
-| `segment_name`| Texto | Nombre descriptivo del cluster (Ej: `Premium/High Revenue`) |
-| `avg_revenue` | Número Decimal | Ingreso promedio de la zona |
-| `avg_trips` | Número Decimal | Viajes promedio de la zona |
-| `avg_distance`| Número Decimal | Distancia promedio en la zona |
-| `generated_at`| Fecha y Hora | Cuándo se ejecutó el algoritmo |
+| `cluster_label`| Texto | Nombre descriptivo del cluster (Ej: `Premium/High Revenue`) |
+| `total_trips` | Número Entero | Total de viajes en la zona |
+| `total_revenue` | Número Decimal | Ingreso total de la zona |
+| `avg_tip` | Número Decimal | Propina promedio en la zona |
+| `tip_rate_pct` | Número Decimal | Porcentaje (0.0 a 1.0) que dejaron propina |
+| `avg_fare` | Número Decimal | Tarifa base promedio |
+| `avg_duration_min` | Número Decimal | Duración promedio del viaje en minutos |
+| `avg_distance_miles` | Número Decimal | Distancia promedio del viaje en millas |
+| `peak_hour_approx` | Número Entero | Hora pico aproximada de la zona |
 
 ---
 
-## 9. `ml_classification` (Dashboard 10)
-**Propósito:** Clasificación de Zonas (Random Forest) para predecir si dan "Buenas Propinas" (>15%).
+## 9. `ml_anomaly_zones` (Dashboard 10)
+**Propósito:** Detección de Anomalías (Isolation Forest) para identificar zonas con comportamiento atípico.
 
 | Columna | Tipo de Dato | Descripción |
 | :--- | :--- | :--- |
-| `zone_id` | Número Entero | ID de la zona |
+| `pickup_zone_id` | Número Entero | ID de la zona de recogida |
 | `zone_name` | Texto | Nombre de la zona |
 | `borough` | Texto | Distrito |
-| `high_tip_prob`| Número Decimal | Probabilidad (0.0 a 1.0) de que dejen buena propina |
-| `predicted_class`| Número Entero | `1` (Buena propina) o `0` (Mala propina) |
-| `feat_revenue` | Número Decimal | Variable predictora: Ingreso |
-| `feat_speed` | Número Decimal | Variable predictora: Velocidad |
-| `feat_distance`| Número Decimal | Variable predictora: Distancia |
-| `generated_at`| Fecha y Hora | Cuándo se ejecutó el algoritmo |
+| `vehicle_type` | Texto | Tipo de taxi (`yellow`, `green`, `fhv`, `hvfhv`) |
+| `year` | Número Entero | Año de evaluación |
+| `month` | Número Entero | Mes de evaluación |
+| `avg_fare` | Número Decimal | Tarifa base promedio |
+| `avg_tip` | Número Decimal | Propina promedio |
+| `tip_rate_pct` | Número Decimal | Porcentaje (0.0 a 1.0) que dejaron propina |
+| `avg_speed_mph` | Número Decimal | Velocidad promedio (MPH) |
+| `avg_duration_min` | Número Decimal | Duración promedio (minutos) |
+| `avg_distance_miles`| Número Decimal | Distancia promedio (millas) |
+| `fare_per_mile` | Número Decimal | Tarifa cobrada por milla |
+| `fare_per_min` | Número Decimal | Tarifa cobrada por minuto |
+| `anomaly_score` | Número Decimal | Puntuación de anomalía (menor = más anómalo) |
+| `anomaly_label` | Texto | Etiqueta (`Normal` o `Anomaly`) |
+| `is_anomaly` | Verdadero/Falso | Si la zona es considerada una anomalía |

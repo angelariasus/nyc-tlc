@@ -41,3 +41,13 @@ To see the real-time pipeline and dashboard in action:
    ```
    *Navigate to the **Lambda Live (2026)** page to see the real-time charts auto-updating every 10 seconds!*
 
+## Resetting the Demo
+
+If you want to run the demonstration multiple times, you can easily wipe all 2026 live data (from both Kafka and MongoDB) back to zero without affecting your historical Batch Layer data (2019-2025).
+
+Run the cleanup utility from inside the Jupyter container:
+```bash
+python lambda/cleanup_2026_stream.py
+```
+After running it, your Lambda Live dashboard will drop back to zero live records, ready for a fresh start.
+
