@@ -72,9 +72,9 @@ STREAM_META_SCHEMA = T.StructType([
 FHV_RECORD_SCHEMA = T.StructType([
     T.StructField("dispatching_base_num",   T.StringType(),  True),
     T.StructField("pickup_datetime",        T.StringType(),  True),
-    T.StructField("dropoff_datetime",       T.StringType(),  True),
-    T.StructField("PULocationID",           T.IntegerType(), True),
-    T.StructField("DOLocationID",           T.IntegerType(), True),
+    T.StructField("dropOff_datetime",       T.StringType(),  True),
+    T.StructField("PUlocationID",           T.IntegerType(), True),
+    T.StructField("DOlocationID",           T.IntegerType(), True),
     T.StructField("SR_Flag",                T.DoubleType(),  True),
     T.StructField("Affiliated_base_number", T.StringType(),  True),
     T.StructField("_stream_meta",           STREAM_META_SCHEMA, True),
@@ -130,12 +130,14 @@ def process_batch(batch_df: DataFrame, batch_id: int) -> None:
         .select("data.*", "_kafka_partition", "_kafka_offset")
     )
 
-    # Cast ISO datetime strings → Spark timestamps
+    # Cast ISO datetime strings → Spark timestamps and normalize names
     parsed_df = (
         parsed_df
+        .withColumnRenamed("dropOff_datetime", "dropoff_datetime")
+        .withColumnRenamed("PUlocationID", "PULocationID")
+        .withColumnRenamed("DOlocationID", "DOLocationID")
         .withColumn("pickup_datetime",  F.to_timestamp("pickup_datetime"))
         .withColumn("dropoff_datetime", F.to_timestamp("dropoff_datetime"))
-        
     )
 
     # ── Step 3: Inject Bronze-equivalent _meta from _stream_meta ───────────────

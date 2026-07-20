@@ -191,3 +191,32 @@ Este documento contiene la estructura exacta de las tablas que se exportarán de
 | `anomaly_score` | Número Decimal | Puntuación de anomalía (menor = más anómalo) |
 | `anomaly_label` | Texto | Etiqueta (`Normal` o `Anomaly`) |
 | `is_anomaly` | Verdadero/Falso | Si la zona es considerada una anomalía |
+
+---
+
+## 10. `mart_pipeline_performance` (Audit & Observability)
+**Propósito:** Rendimiento, tiempos de ejecución y volumen de datos procesados por cada pipeline.
+
+| Columna | Tipo de Dato | Descripción |
+| :--- | :--- | :--- |
+| `run_date` | Fecha | Fecha de ejecución del pipeline |
+| `pipeline_name` | Texto | Nombre del pipeline ejecutado (ej. `silver_yellow`, `gold_marts`) |
+| `status` | Texto | Estado de la ejecución (ej. `COMPLETED`, `FAILED`) |
+| `total_runs` | Número Entero | Cantidad total de veces que se corrió ese pipeline en el día |
+| `avg_duration_seconds` | Número Decimal | Duración promedio en segundos de las ejecuciones |
+| `max_duration_seconds` | Número Decimal | Duración máxima registrada |
+| `min_duration_seconds` | Número Decimal | Duración mínima registrada |
+| `total_rows_written` | Número Entero | Total de registros exitosamente escritos/procesados |
+| `total_rows_rejected` | Número Entero | Total de registros que fallaron las reglas y se enviaron a cuarentena |
+
+---
+
+## 11. `mart_data_quality_issues` (Audit & Observability)
+**Propósito:** Análisis y métricas de registros descartados (cuarentena) por reglas de calidad de datos.
+
+| Columna | Tipo de Dato | Descripción |
+| :--- | :--- | :--- |
+| `quarantine_date` | Fecha | Fecha en que el registro fue enviado a cuarentena |
+| `pipeline` | Texto | Pipeline de origen que descartó el registro (ej. `silver_green`) |
+| `reason` | Texto | Razón o regla de calidad que originó el descarte (ej. `Tarifa Invalida`) |
+| `rejected_records` | Número Entero | Cantidad total de registros rechazados por esta razón exacta |

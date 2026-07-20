@@ -197,18 +197,18 @@ FHV_RULES: List[Rule] = [
     Rule(
         name="valid_pickup_zone",
         description="Pickup location ID must be in [1, 265] or null.",
-        condition=lambda df: F.col("PULocationID").between(1, 265) | F.col("PULocationID").isNull(),
+        condition=lambda df: F.col("PUlocationID").between(1, 265) | F.col("PUlocationID").isNull(),
     ),
     Rule(
         name="valid_dropoff_zone",
         description="Dropoff location ID must be in [1, 265] or null.",
-        condition=lambda df: F.col("DOLocationID").between(1, 265) | F.col("DOLocationID").isNull(),
+        condition=lambda df: F.col("DOlocationID").between(1, 265) | F.col("DOlocationID").isNull(),
     ),
     Rule(
         name="valid_time_order",
         description="Dropoff datetime must be after pickup datetime.",
         condition=lambda df: (
-            F.col("dropoff_datetime") > F.col("pickup_datetime")
+            F.col("dropOff_datetime") > F.col("pickup_datetime")
         ),
     ),
     Rule(

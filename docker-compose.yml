@@ -264,6 +264,22 @@ services:
     container_name: tlc_lambda_ml_inference
     command: ["python", "lambda/speed_layer/ml_stream_inference.py"]
 
+  # ── MongoDB BI Connector (Para Power BI) ──────────────────────────────────────
+  bi-connector:
+    image: albertomxm/mongodb-bi-connector:latest
+    container_name: tlc_bi_connector
+    restart: always
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "3307:3307"
+    command: ["mongosqld", "--addr", "0.0.0.0:3307", "--mongo-uri", "mongodb://mongodb:27017", "--auth", "--mongo-username", "${MONGO_USER:-admin}", "--mongo-password", "${MONGO_PASSWORD:-password123}", "--mongo-authenticationSource", "admin", "--sslMode", "requireSSL", "--sslPEMKeyFile", "/certs/mongosqld-cert.pem"]
+    networks:
+      - tlc_network
+    volumes:
+      - ./bi-connector:/certs
+
 volumes:
   tlc_mongodb_data:
   tlc_mongodb_config:

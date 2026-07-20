@@ -90,6 +90,7 @@ GREEN_RECORD_SCHEMA = T.StructType([
     T.StructField("payment_type",           T.IntegerType(), True),
     T.StructField("trip_type",              T.DoubleType(),  True),
     T.StructField("congestion_surcharge",   T.DoubleType(),  True),
+    T.StructField("cbd_congestion_fee",     T.DoubleType(),  True),
     T.StructField("_stream_meta",           STREAM_META_SCHEMA, True),
 ])
 

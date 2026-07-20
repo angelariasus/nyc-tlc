@@ -88,7 +88,7 @@ YELLOW_RECORD_SCHEMA = T.StructType([
     T.StructField("improvement_surcharge",  T.DoubleType(),  True),
     T.StructField("total_amount",           T.DoubleType(),  True),
     T.StructField("congestion_surcharge",   T.DoubleType(),  True),
-    T.StructField("airport_fee",            T.DoubleType(),  True),
+    T.StructField("Airport_fee",            T.DoubleType(),  True),
     T.StructField("cbd_congestion_fee",     T.DoubleType(),  True),
     T.StructField("_stream_meta",           STREAM_META_SCHEMA, True),
 ])
@@ -143,9 +143,10 @@ def process_batch(batch_df: DataFrame, batch_id: int) -> None:
         .select("data.*", "_kafka_partition", "_kafka_offset")
     )
 
-    # Cast ISO datetime strings → Spark timestamps
+    # Cast ISO datetime strings → Spark timestamps and normalize names
     parsed_df = (
         parsed_df
+        .withColumnRenamed("Airport_fee", "airport_fee")
         .withColumn("tpep_pickup_datetime",  F.to_timestamp("tpep_pickup_datetime"))
         .withColumn("tpep_dropoff_datetime", F.to_timestamp("tpep_dropoff_datetime"))
         .withColumn("passenger_count",       F.col("passenger_count").cast("int"))
